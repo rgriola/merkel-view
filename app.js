@@ -6,6 +6,7 @@ let tempMarker = null;
 let selectedLocation = null;
 let auth, db, storage;
 let currentUserEmail = ''; // Store email for multi-step auth
+let isInAuthFlow = false; // Prevent auth state interference during multi-step flow
 
 // DOM elements (will be queried when needed)
 let authContainer, appContainer;
@@ -90,6 +91,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize DOM elements
 function initializeDOMElements() {
+    console.log('Initializing DOM elements...');
+    
     // Main containers
     authContainer = document.getElementById('auth-container');
     appContainer = document.getElementById('app-container');
@@ -101,10 +104,24 @@ function initializeDOMElements() {
     passwordResetStep = document.getElementById('password-reset-step');
     emailVerificationStep = document.getElementById('email-verification-step');
     
+    console.log('Auth steps found:', {
+        emailStep: !!emailStep,
+        passwordStep: !!passwordStep,
+        registerStep: !!registerStep,
+        passwordResetStep: !!passwordResetStep,
+        emailVerificationStep: !!emailVerificationStep
+    });
+    
     // Forms and inputs
     emailForm = document.getElementById('email-form');
     emailInput = document.getElementById('email-input');
     emailContinueBtn = document.getElementById('email-continue-btn');
+    
+    console.log('Email form elements found:', {
+        emailForm: !!emailForm,
+        emailInput: !!emailInput,
+        emailContinueBtn: !!emailContinueBtn
+    });
     
     passwordForm = document.getElementById('password-form');
     passwordInput = document.getElementById('password-input');
@@ -243,6 +260,7 @@ function setupAuthListeners() {
         if (user) {
             // User is signed in
             currentUser = user;
+            isInAuthFlow = false; // Reset auth flow flag
             
             // Check if email is verified
             if (!user.emailVerified) {
@@ -257,16 +275,24 @@ function setupAuthListeners() {
         } else {
             // User is signed out
             currentUser = null;
-            showEmailStep();
+            
+            // Only show email step if we're not in the middle of the auth flow
+            if (!isInAuthFlow) {
+                showEmailStep();
+            }
         }
     });
 
     // Step 1: Email form
     if (emailForm) {
+        console.log('Setting up email form listener');
         emailForm.addEventListener('submit', function(e) {
+            console.log('Email form submitted');
             e.preventDefault();
             handleEmailSubmit();
         });
+    } else {
+        console.error('Email form not found!');
     }
 
     // Step 2: Password form
@@ -299,7 +325,10 @@ function setupAuthListeners() {
     }
 
     if (backToEmailBtn) {
-        backToEmailBtn.addEventListener('click', showEmailStep);
+        backToEmailBtn.addEventListener('click', function() {
+            isInAuthFlow = false;
+            showEmailStep();
+        });
     }
 
     if (forgotPasswordBtn) {
@@ -311,7 +340,10 @@ function setupAuthListeners() {
     }
 
     if (backToLoginBtn) {
-        backToLoginBtn.addEventListener('click', showEmailStep);
+        backToLoginBtn.addEventListener('click', function() {
+            isInAuthFlow = false;
+            showEmailStep();
+        });
     }
 
     // Verification buttons
@@ -339,15 +371,21 @@ function setupAuthListeners() {
 
 // Authentication Step Navigation Functions
 function showEmailStep() {
+    console.log('showEmailStep called');
     hideAllAuthSteps();
     if (emailStep) {
         emailStep.style.display = 'block';
         if (emailInput) emailInput.focus();
     }
     currentUserEmail = '';
+    isInAuthFlow = false;
 }
 
 function showPasswordStep() {
+    console.log('showPasswordStep called');
+    console.log('passwordStep element:', passwordStep);
+    console.log('currentUserEmail:', currentUserEmail);
+    
     hideAllAuthSteps();
     if (passwordStep) {
         passwordStep.style.display = 'block';
@@ -358,6 +396,9 @@ function showPasswordStep() {
             passwordInput.focus();
             passwordInput.value = '';
         }
+        console.log('Password step should now be visible');
+    } else {
+        console.error('passwordStep element not found!');
     }
 }
 
@@ -395,9 +436,15 @@ function showEmailVerificationStep(email) {
 }
 
 function hideAllAuthSteps() {
+    console.log('hideAllAuthSteps called');
     const steps = [emailStep, passwordStep, registerStep, passwordResetStep, emailVerificationStep];
-    steps.forEach(step => {
-        if (step) step.style.display = 'none';
+    steps.forEach((step, index) => {
+        if (step) {
+            step.style.display = 'none';
+            console.log(`Hidden step ${index}`);
+        } else {
+            console.log(`Step ${index} not found`);
+        }
     });
 }
 
@@ -420,7 +467,13 @@ function showApp() {
 
 // Authentication Flow Handlers
 function handleEmailSubmit() {
-    const email = emailInput.value.trim();
+    console.log('handleEmailSubmit called');
+    
+    // Get the input value directly from DOM if emailInput isn't set
+    const emailInputElement = emailInput || document.getElementById('email-input');
+    const email = emailInputElement ? emailInputElement.value.trim() : '';
+    
+    console.log('Email value:', email);
     
     if (!email) {
         showAuthStatus('Please enter your email address', 'error');
@@ -432,7 +485,10 @@ function handleEmailSubmit() {
         return;
     }
     
+    console.log('Setting currentUserEmail to:', email);
     currentUserEmail = email;
+    isInAuthFlow = true; // Set flag to prevent auth state interference
+    console.log('Calling showPasswordStep()');
     showPasswordStep();
 }
 

@@ -8,7 +8,7 @@ let auth, db, storage;
 
 // DOM elements (will be queried when needed)
 let authContainer, appContainer, loginForm, emailInput, passwordInput;
-let registerBtn, logoutBtn, authStatus, userEmailDisplay;
+let registerBtn, logoutBtn, authStatus, userEmailDisplay, forgotPasswordBtn;
 let addressSearch, searchBtn, addLocationBtn, locationModal, locationForm;
 let closeModal, cancelLocation;
 
@@ -92,6 +92,7 @@ function initializeDOMElements() {
     logoutBtn = document.getElementById('logout-btn');
     authStatus = document.getElementById('auth-status');
     userEmailDisplay = document.getElementById('user-email-display');
+    forgotPasswordBtn = document.getElementById('forgot-password-btn');
 
     // Map and location elements
     addressSearch = document.getElementById('address-search');
@@ -219,6 +220,33 @@ function setupAuthListeners() {
         register();
     });
 
+    // Forgot password button
+    if (forgotPasswordBtn) {
+        forgotPasswordBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            resetPassword();
+        });
+    }
+    
+    // Show help text when email field is focused
+    if (emailInput) {
+        emailInput.addEventListener('focus', function() {
+            const helpText = document.getElementById('forgot-password-help');
+            if (helpText && !passwordInput.value) {
+                helpText.style.display = 'block';
+            }
+        });
+        
+        emailInput.addEventListener('blur', function() {
+            const helpText = document.getElementById('forgot-password-help');
+            if (helpText) {
+                setTimeout(() => {
+                    helpText.style.display = 'none';
+                }, 3000);
+            }
+        });
+    }
+
     // Logout button
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function() {
@@ -317,6 +345,63 @@ function register() {
             }
             
             showAuthStatus('Registration failed: ' + errorMessage, 'error');
+        });
+}
+
+// Reset password function
+function resetPassword() {
+    const email = emailInput.value.trim();
+    
+    if (!email) {
+        showAuthStatus('Please enter your email address', 'error');
+        emailInput.focus();
+        return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showAuthStatus('Please enter a valid email address', 'error');
+        emailInput.focus();
+        return;
+    }
+    
+    showAuthStatus('Sending password reset email...', 'info');
+    
+    auth.sendPasswordResetEmail(email)
+        .then(() => {
+            console.log('Password reset email sent to:', email);
+            showAuthStatus(
+                `Password reset email sent to ${email}. Check your inbox and follow the instructions.`, 
+                'success'
+            );
+            
+            // Clear the form
+            emailInput.value = '';
+            passwordInput.value = '';
+            
+            // Show additional instructions
+            setTimeout(() => {
+                showAuthStatus(
+                    'If you don\'t see the email, check your spam folder. The reset link will expire in 1 hour.', 
+                    'info'
+                );
+            }, 5000);
+        })
+        .catch((error) => {
+            console.error('Password reset error:', error);
+            let errorMessage = error.message;
+            
+            // Handle specific error codes
+            if (error.code === 'auth/user-not-found') {
+                errorMessage = 'No account found with this email address';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = 'Please enter a valid email address';
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMessage = 'Too many reset attempts. Please try again later.';
+            }
+            
+            showAuthStatus('Password reset failed: ' + errorMessage, 'error');
         });
 }
 

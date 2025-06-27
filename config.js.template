@@ -1,0 +1,73 @@
+// config.js.template - Configuration Template
+// Copy this file to config.js and update with your credentials
+
+const Config = {
+    // Development configuration
+    development: {
+        firebase: {
+            apiKey: "your-dev-firebase-api-key",
+            authDomain: "your-dev-project.firebaseapp.com",
+            projectId: "your-dev-project-id",
+            storageBucket: "your-dev-project.appspot.com",
+            messagingSenderId: "your-dev-messaging-sender-id",
+            appId: "your-dev-app-id"
+        },
+        googleMaps: {
+            apiKey: "your-dev-google-maps-api-key"
+        }
+    },
+    
+    // Production configuration
+    production: {
+        firebase: {
+            apiKey: "your-prod-firebase-api-key",
+            authDomain: "your-prod-project.firebaseapp.com",
+            projectId: "your-prod-project-id",
+            storageBucket: "your-prod-project.appspot.com",
+            messagingSenderId: "your-prod-messaging-sender-id",
+            appId: "your-prod-app-id"
+        },
+        googleMaps: {
+            apiKey: "your-prod-google-maps-api-key"
+        }
+    }
+};
+
+// Detect environment
+const getEnvironment = () => {
+    if (typeof process !== 'undefined' && process.env.NODE_ENV) {
+        return process.env.NODE_ENV;
+    }
+    
+    // Check if running on GitHub Pages
+    if (window.location.hostname.includes('github.io')) {
+        return 'production';
+    }
+    
+    // Check if localhost
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'development';
+    }
+    
+    // Default to production
+    return 'production';
+};
+
+// Get current configuration
+const getCurrentConfig = () => {
+    const env = getEnvironment();
+    console.log(\`🌍 Environment: \${env}\`);
+    return Config[env] || Config.production;
+};
+
+// Export for use in other files
+window.AppConfig = getCurrentConfig();
+window.Environment = getEnvironment();
+
+console.log('📋 Configuration loaded:', window.Environment);
+
+// Setup Instructions:
+// 1. Get Firebase credentials from: https://console.firebase.google.com
+// 2. Get Google Maps API key from: https://console.cloud.google.com
+// 3. Replace all "your-*" placeholders above with your actual values
+// 4. Save this file as config.js (without .template extension)

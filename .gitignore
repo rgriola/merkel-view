@@ -59,3 +59,4 @@ firebase-config-private.js
 .local
 .vercel
 firebase-config.js
+config.js

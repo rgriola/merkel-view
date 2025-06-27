@@ -35,7 +35,7 @@ A collaborative web application for managing and visualizing location data with 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/merkel-view.git
+   git clone https://github.com/rgriola/merkel-view.git
    cd merkel-view
    ```
 
@@ -44,25 +44,41 @@ A collaborative web application for managing and visualizing location data with 
    npm install
    ```
 
-3. **Configure Firebase**
-   - Copy `firebase-config.js.template` to `firebase-config.js`
-   - Update with your Firebase project credentials
-   - See [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for detailed instructions
-
-4. **Set up Google Maps**
-   - Get API key from Google Cloud Console
-   - Update the API key in `index.html`
-   - Enable required APIs (Maps JavaScript, Geocoding, Places)
-
-5. **Deploy security rules**
+3. **Configure the application**
    ```bash
-   firebase deploy --only firestore:rules,storage
+   npm run setup
+   ```
+   This will guide you through setting up your Firebase and Google Maps credentials.
+
+4. **Validate configuration**
+   ```bash
+   npm run validate-config
    ```
 
-6. **Start development server**
+5. **Start development server**
    ```bash
    npm start
-   # or simply open index.html in a web browser
+   ```
+   
+6. **Open in browser**
+   ```
+   http://localhost:3000
+   ```
+
+### Alternative Manual Setup
+
+If you prefer to configure manually:
+
+1. **Copy the template**
+   ```bash
+   cp config.js.template config.js
+   ```
+
+2. **Edit config.js** with your Firebase and Google Maps credentials
+
+3. **Deploy security rules** (optional, for production)
+   ```bash
+   firebase deploy --only firestore:rules,storage
    ```
 
 ## 🏗️ Project Structure
@@ -133,6 +149,30 @@ This application implements comprehensive security measures:
 - **API Security**: Google Maps API with domain restrictions
 
 ## 🚀 Deployment
+
+### GitHub Pages (Automatic)
+
+This project is configured for automatic deployment to GitHub Pages:
+
+1. **Set up GitHub Secrets** (in your GitHub repository settings):
+   - `FIREBASE_API_KEY`
+   - `FIREBASE_AUTH_DOMAIN` 
+   - `FIREBASE_PROJECT_ID`
+   - `FIREBASE_STORAGE_BUCKET`
+   - `FIREBASE_MESSAGING_SENDER_ID`
+   - `FIREBASE_APP_ID`
+   - `GOOGLE_MAPS_API_KEY`
+
+2. **Push to main branch**:
+   ```bash
+   git push origin main
+   ```
+
+3. **Enable GitHub Pages**:
+   - Go to repository Settings → Pages
+   - Select "Deploy from a branch"
+   - Choose "gh-pages" branch
+   - Your app will be available at: `https://yourusername.github.io/merkel-view`
 
 ### Firebase Hosting
 ```bash

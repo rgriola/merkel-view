@@ -46,24 +46,38 @@ const AppState = {
 
 // Initialize app when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Firebase first
-    initializeFirebase();
+    console.log('🚀 App starting...');
     
-    // Get Firebase services
-    auth = window.auth;
-    db = window.db;
-    storage = window.storage;
+    // Wait for Firebase to be ready
+    function initializeApp() {
+        if (!window.auth || !window.db || !window.storage) {
+            console.log('⏳ Waiting for Firebase services...');
+            setTimeout(initializeApp, 100);
+            return;
+        }
+        
+        // Get Firebase services
+        auth = window.auth;
+        db = window.db;
+        storage = window.storage;
+        
+        // Get DOM elements
+        initializeDOMElements();
+        
+        // Set up authentication listeners
+        setupAuthListeners();
+        
+        // Set up map and location listeners
+        setupLocationListeners();
+        
+        console.log('✅ App initialized successfully');
+    }
     
-    // Get DOM elements
-    initializeDOMElements();
+    // Listen for Firebase ready event
+    window.addEventListener('firebaseReady', initializeApp);
     
-    // Set up authentication listeners
-    setupAuthListeners();
-    
-    // Set up map and location listeners
-    setupLocationListeners();
-    
-    console.log('App initialized');
+    // Also try immediate initialization in case Firebase is already ready
+    initializeApp();
 });
 
 // Initialize DOM elements

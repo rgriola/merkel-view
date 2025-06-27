@@ -1,0 +1,66 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Create production config
+      run: |
+        cat > config.production.js << 'EOF'
+        // Production configuration with environment variables
+        const Config = {
+          production: {
+            firebase: {
+              apiKey: "${{ secrets.FIREBASE_API_KEY }}",
+              authDomain: "${{ secrets.FIREBASE_AUTH_DOMAIN }}",
+              projectId: "${{ secrets.FIREBASE_PROJECT_ID }}",
+              storageBucket: "${{ secrets.FIREBASE_STORAGE_BUCKET }}",
+              messagingSenderId: "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}",
+              appId: "${{ secrets.FIREBASE_APP_ID }}"
+            },
+            googleMaps: {
+              apiKey: "${{ secrets.GOOGLE_MAPS_API_KEY }}"
+            }
+          }
+        };
+        
+        window.AppConfig = Config.production;
+        window.Environment = 'production';
+        console.log('📋 Production configuration loaded');
+        EOF
+        
+    - name: Replace config for production
+      run: |
+        if [ -f "config.production.js" ]; then
+          cp config.production.js config.js
+        fi
+        
+    - name: Build
+      run: npm run build
+      
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/main'
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./
+        exclude_assets: '.github,node_modules,.gitignore,*.md,package*.json'

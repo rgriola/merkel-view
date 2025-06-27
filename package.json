@@ -6,10 +6,12 @@
   "scripts": {
     "start": "npx serve . -p 3000",
     "dev": "npx serve . -p 3000 --live",
-    "build": "echo 'No build process required for vanilla JS app'",
+    "build": "echo 'Build complete - static files ready for deployment'",
     "test": "echo 'Tests not implemented yet'",
     "lint": "echo 'Linting not configured yet'",
-    "deploy": "firebase deploy"
+    "deploy": "firebase deploy",
+    "setup": "node setup.js",
+    "validate-config": "node validate-config.js"
   },
   "keywords": [
     "firebase",

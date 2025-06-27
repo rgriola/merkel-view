@@ -35,6 +35,7 @@
             <h2>Enter Password</h2>
             <p id="password-email-display"></p>
             <form id="password-form">
+                <input type="email" id="password-email-hidden" style="display: none;" autocomplete="username">
                 <input type="password" id="password-input" placeholder="Password" required autocomplete="current-password">
                 <button type="submit" id="password-login-btn">Sign In</button>
             </form>
@@ -50,13 +51,13 @@
             <p class="registration-notice">All fields are required. You'll need to verify your email before accessing the app.</p>
             <form id="register-form">
                 <div class="form-row">
-                    <input type="text" id="first-name" placeholder="First Name" required>
-                    <input type="text" id="last-name" placeholder="Last Name" required>
+                    <input type="text" id="first-name" placeholder="First Name" required autocomplete="given-name">
+                    <input type="text" id="last-name" placeholder="Last Name" required autocomplete="family-name">
                 </div>
                 <input type="email" id="register-email" placeholder="Email" required autocomplete="email">
-                <input type="tel" id="phone" placeholder="Phone Number" required>
-                <input type="password" id="register-password" placeholder="Password (min 6 characters)" required minlength="6">
-                <input type="password" id="confirm-password" placeholder="Confirm Password" required minlength="6">
+                <input type="tel" id="phone" placeholder="Phone Number" required autocomplete="tel">
+                <input type="password" id="register-password" placeholder="Password (min 6 characters)" required minlength="6" autocomplete="new-password">
+                <input type="password" id="confirm-password" placeholder="Confirm Password" required minlength="6" autocomplete="new-password">
                 <button type="submit" id="register-submit-btn">Create Account</button>
             </form>
             <div class="auth-links">

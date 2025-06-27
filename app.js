@@ -367,6 +367,13 @@ function showPasswordStep() {
         if (passwordEmailDisplay) {
             passwordEmailDisplay.textContent = currentUserEmail;
         }
+        
+        // Set hidden email field for accessibility
+        const hiddenEmailField = document.getElementById('password-email-hidden');
+        if (hiddenEmailField) {
+            hiddenEmailField.value = currentUserEmail;
+        }
+        
         if (passwordInput) {
             passwordInput.focus();
             passwordInput.value = '';
@@ -453,6 +460,10 @@ function handleEmailSubmit() {
 }
 
 function handlePasswordSubmit() {
+    if (!checkFirebaseConfig()) {
+        return;
+    }
+    
     const password = passwordInput.value.trim();
     
     if (!password) {
@@ -480,6 +491,8 @@ function handlePasswordSubmit() {
                 errorMessage = 'Please enter a valid email address.';
             } else if (error.code === 'auth/user-disabled') {
                 errorMessage = 'This account has been disabled.';
+            } else if (error.code === 'auth/api-key-not-valid') {
+                errorMessage = 'Firebase API key not configured. Please set up your Firebase credentials.';
             }
             
             showAuthStatus(errorMessage, 'error');
@@ -487,6 +500,10 @@ function handlePasswordSubmit() {
 }
 
 function handleRegistrationSubmit() {
+    if (!checkFirebaseConfig()) {
+        return;
+    }
+    
     const firstName = firstNameInput.value.trim();
     const lastName = lastNameInput.value.trim();
     const email = registerEmailInput.value.trim();
@@ -565,6 +582,10 @@ function handleRegistrationSubmit() {
 }
 
 function handlePasswordReset() {
+    if (!checkFirebaseConfig()) {
+        return;
+    }
+    
     const email = resetEmailInput.value.trim();
     
     if (!email) {
@@ -665,6 +686,27 @@ function showAuthStatus(message, type) {
             authStatus.style.display = 'none';
         }, 5000);
     }
+}
+
+// Check if Firebase is properly configured
+function checkFirebaseConfig() {
+    const config = window.appConfig;
+    if (!config || !config.firebase) {
+        showAuthStatus('Firebase configuration not loaded. Please check config.js', 'error');
+        return false;
+    }
+    
+    // Check for placeholder values
+    const isPlaceholder = config.firebase.apiKey.includes('your-') || 
+                         config.firebase.apiKey === 'demo-api-key' ||
+                         config.firebase.projectId === 'demo-project';
+    
+    if (isPlaceholder) {
+        showAuthStatus('Please configure Firebase credentials in config.js for full functionality', 'info');
+        return false;
+    }
+    
+    return true;
 }
 
 // Initialize Google Maps
@@ -994,6 +1036,47 @@ function closeLocationModal() {
     // Reset form
     if (locationForm) {
         locationForm.reset();
+    }
+}
+
+// Setup photo preview functionality
+function setupPhotoPreview() {
+    const photoInput = document.getElementById('location-photo');
+    if (photoInput) {
+        photoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Remove existing preview
+                const existingPreview = document.getElementById('photo-preview');
+                if (existingPreview) {
+                    existingPreview.remove();
+                }
+                
+                // Create new preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewDiv = document.createElement('div');
+                    previewDiv.id = 'photo-preview';
+                    previewDiv.style.cssText = 'margin: 10px 0; text-align: center;';
+                    
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.style.cssText = 'max-width: 200px; max-height: 150px; border-radius: 6px; border: 2px solid #ddd;';
+                    
+                    const fileName = document.createElement('p');
+                    fileName.textContent = file.name;
+                    fileName.style.cssText = 'font-size: 12px; color: #666; margin: 5px 0 0 0;';
+                    
+                    previewDiv.appendChild(img);
+                    previewDiv.appendChild(fileName);
+                    
+                    // Insert preview after the photo input
+                    photoInput.parentNode.insertBefore(previewDiv, photoInput.nextSibling);
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        });
     }
 }
 

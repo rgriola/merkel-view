@@ -109,26 +109,38 @@
     function createMockAuth() {
         return {
             onAuthStateChanged: function(callback) {
-                // Simulate no user logged in
+                // Simulate no user logged in initially
                 setTimeout(() => callback(null), 100);
                 return () => {}; // unsubscribe function
             },
             signInWithEmailAndPassword: function(email, password) {
-                return Promise.reject({
-                    code: 'demo/disabled',
-                    message: 'Authentication disabled in demo mode. This is for UI testing only.'
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        reject({
+                            code: 'demo/disabled',
+                            message: '🎭 Demo Mode: Authentication UI flow completed successfully! To enable real authentication, configure Firebase credentials in config.js'
+                        });
+                    }, 1000); // Simulate network delay
                 });
             },
             createUserWithEmailAndPassword: function(email, password) {
-                return Promise.reject({
-                    code: 'demo/disabled',
-                    message: 'Registration disabled in demo mode. This is for UI testing only.'
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        reject({
+                            code: 'demo/disabled',
+                            message: '🎭 Demo Mode: Registration UI flow completed successfully! To enable real registration, configure Firebase credentials in config.js'
+                        });
+                    }, 1500); // Simulate network delay
                 });
             },
             sendPasswordResetEmail: function(email) {
-                return Promise.reject({
-                    code: 'demo/disabled',
-                    message: 'Password reset disabled in demo mode. This is for UI testing only.'
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        reject({
+                            code: 'demo/disabled',
+                            message: '🎭 Demo Mode: Password reset UI flow completed successfully! To enable real password reset, configure Firebase credentials in config.js'
+                        });
+                    }, 1200); // Simulate network delay
                 });
             },
             signOut: function() {

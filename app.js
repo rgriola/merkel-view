@@ -460,10 +460,6 @@ function handleEmailSubmit() {
 }
 
 function handlePasswordSubmit() {
-    if (!checkFirebaseConfig()) {
-        return;
-    }
-    
     const password = passwordInput.value.trim();
     
     if (!password) {
@@ -502,10 +498,6 @@ function handlePasswordSubmit() {
 }
 
 function handleRegistrationSubmit() {
-    if (!checkFirebaseConfig()) {
-        return;
-    }
-    
     const firstName = firstNameInput.value.trim();
     const lastName = lastNameInput.value.trim();
     const email = registerEmailInput.value.trim();
@@ -584,10 +576,6 @@ function handleRegistrationSubmit() {
 }
 
 function handlePasswordReset() {
-    if (!checkFirebaseConfig()) {
-        return;
-    }
-    
     const email = resetEmailInput.value.trim();
     
     if (!email) {

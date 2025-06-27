@@ -1,0 +1,41 @@
+{
+  "name": "merkel-view",
+  "version": "1.0.0",
+  "description": "A collaborative location intelligence platform built with Firebase and Google Maps",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve . -p 3000",
+    "dev": "npx serve . -p 3000 --live",
+    "build": "echo 'No build process required for vanilla JS app'",
+    "test": "echo 'Tests not implemented yet'",
+    "lint": "echo 'Linting not configured yet'",
+    "deploy": "firebase deploy"
+  },
+  "keywords": [
+    "firebase",
+    "google-maps",
+    "location",
+    "collaboration",
+    "javascript",
+    "web-app"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "firebase": "^11.9.1"
+  },
+  "devDependencies": {
+    "serve": "^14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/merkel-view.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/merkel-view/issues"
+  },
+  "homepage": "https://github.com/yourusername/merkel-view#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

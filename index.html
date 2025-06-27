@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merkel View - Location Intelligence</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Firebase v9 CDN (Compat version for easier setup) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+    <!-- Authentication Section -->
+    <div id="auth-container">
+        <h1>Merkel View</h1>
+        <form id="login-form">
+            <input type="email" id="email" placeholder="Email" required autocomplete="email">
+            <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+            <button type="submit" id="login-btn">Login</button>
+            <button type="button" id="register-btn">Register</button>
+        </form>
+        <div id="auth-status"></div>
+    </div>
+
+    <!-- Main App Section (hidden until authenticated) -->
+    <div id="app-container" style="display: none;">
+        <div class="app-header">
+            <h2>Merkel View Dashboard</h2>
+            <div class="user-controls">
+                <span id="user-email-display"></span>
+                <button id="logout-btn">Logout</button>
+            </div>
+        </div>
+        
+        <div class="app-content">
+            <!-- Map Controls -->
+            <div class="map-controls">
+                <div class="search-container">
+                    <input type="text" id="address-search" placeholder="Search for address, city, or landmark..." />
+                    <button id="search-btn">Search</button>
+                </div>
+                <div class="map-instructions">
+                    <p id="map-instruction-text">💡 <strong>Click on the map</strong> to add a location, or search for an address above</p>
+                    <p id="geocoding-warning" style="display: none; color: #ff9800; font-size: 12px;">
+                        ⚠️ Address search disabled. Enable Geocoding API in Google Cloud Console for full functionality.
+                    </p>
+                </div>
+            </div>
+            
+            <div id="map" style="height: 500px; width: 100%; margin: 20px 0;"></div>
+            
+            <div id="sidebar">
+                <h3>Locations</h3>
+                <button id="add-location-btn">Manual Add Location</button>
+                <div id="location-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loading" style="display: none;">
+        <p>Loading...</p>
+    </div>
+
+    <!-- Add Location Modal -->
+    <div id="location-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Location</h2>
+                <span class="close" id="close-modal">&times;</span>
+            </div>
+            <form id="location-form" class="location-form">
+                <div class="form-group">
+                    <label>Location Name *</label>
+                    <input type="text" id="location-name" placeholder="Enter a name for this location" required>
+                </div>
+                <div class="form-group">
+                    <label>Address/Location</label>
+                    <input type="text" id="location-address" readonly>
+                    <small>Selected from map click or search</small>
+                </div>
+                <div class="form-group">
+                    <label>Coordinates</label>
+                    <input type="text" id="location-coords" readonly>
+                    <small>Latitude, Longitude</small>
+                </div>
+                <div class="form-group">
+                    <label>State</label>
+                    <select id="location-state" required>
+                        <option value="">Select State</option>
+                        <option value="AL">Alabama</option>
+                        <option value="CA">California</option>
+                        <option value="FL">Florida</option>
+                        <option value="NY">New York</option>
+                        <option value="TX">Texas</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>City</label>
+                    <input type="text" id="location-city" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="location-category" required>
+                        <option value="">Select Category</option>
+                        <option value="restaurant">Restaurant</option>
+                        <option value="hotel">Hotel</option>
+                        <option value="attraction">Tourist Attraction</option>
+                        <option value="business">Business</option>
+                        <option value="landmark">Landmark</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="location-notes" rows="3" placeholder="Add any notes about this location..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Photo (Optional)</label>
+                    <input type="file" id="location-photo" accept="image/*">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" id="cancel-location">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Location</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+    <script async defer 
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCHQECnK2DXcNXIQR0ZfvIEPrAJWIH8JsM&callback=initMap&loading=async&libraries=marker,places">
+    </script>
+</body>
+</html>

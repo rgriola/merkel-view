@@ -91,8 +91,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize DOM elements
 function initializeDOMElements() {
-    console.log('Initializing DOM elements...');
-    
     // Main containers
     authContainer = document.getElementById('auth-container');
     appContainer = document.getElementById('app-container');
@@ -104,24 +102,10 @@ function initializeDOMElements() {
     passwordResetStep = document.getElementById('password-reset-step');
     emailVerificationStep = document.getElementById('email-verification-step');
     
-    console.log('Auth steps found:', {
-        emailStep: !!emailStep,
-        passwordStep: !!passwordStep,
-        registerStep: !!registerStep,
-        passwordResetStep: !!passwordResetStep,
-        emailVerificationStep: !!emailVerificationStep
-    });
-    
     // Forms and inputs
     emailForm = document.getElementById('email-form');
     emailInput = document.getElementById('email-input');
     emailContinueBtn = document.getElementById('email-continue-btn');
-    
-    console.log('Email form elements found:', {
-        emailForm: !!emailForm,
-        emailInput: !!emailInput,
-        emailContinueBtn: !!emailContinueBtn
-    });
     
     passwordForm = document.getElementById('password-form');
     passwordInput = document.getElementById('password-input');
@@ -285,14 +269,10 @@ function setupAuthListeners() {
 
     // Step 1: Email form
     if (emailForm) {
-        console.log('Setting up email form listener');
         emailForm.addEventListener('submit', function(e) {
-            console.log('Email form submitted');
             e.preventDefault();
             handleEmailSubmit();
         });
-    } else {
-        console.error('Email form not found!');
     }
 
     // Step 2: Password form
@@ -371,7 +351,6 @@ function setupAuthListeners() {
 
 // Authentication Step Navigation Functions
 function showEmailStep() {
-    console.log('showEmailStep called');
     hideAllAuthSteps();
     if (emailStep) {
         emailStep.style.display = 'block';
@@ -382,10 +361,6 @@ function showEmailStep() {
 }
 
 function showPasswordStep() {
-    console.log('showPasswordStep called');
-    console.log('passwordStep element:', passwordStep);
-    console.log('currentUserEmail:', currentUserEmail);
-    
     hideAllAuthSteps();
     if (passwordStep) {
         passwordStep.style.display = 'block';
@@ -396,9 +371,6 @@ function showPasswordStep() {
             passwordInput.focus();
             passwordInput.value = '';
         }
-        console.log('Password step should now be visible');
-    } else {
-        console.error('passwordStep element not found!');
     }
 }
 
@@ -436,15 +408,9 @@ function showEmailVerificationStep(email) {
 }
 
 function hideAllAuthSteps() {
-    console.log('hideAllAuthSteps called');
     const steps = [emailStep, passwordStep, registerStep, passwordResetStep, emailVerificationStep];
-    steps.forEach((step, index) => {
-        if (step) {
-            step.style.display = 'none';
-            console.log(`Hidden step ${index}`);
-        } else {
-            console.log(`Step ${index} not found`);
-        }
+    steps.forEach(step => {
+        if (step) step.style.display = 'none';
     });
 }
 
@@ -467,13 +433,9 @@ function showApp() {
 
 // Authentication Flow Handlers
 function handleEmailSubmit() {
-    console.log('handleEmailSubmit called');
-    
     // Get the input value directly from DOM if emailInput isn't set
     const emailInputElement = emailInput || document.getElementById('email-input');
     const email = emailInputElement ? emailInputElement.value.trim() : '';
-    
-    console.log('Email value:', email);
     
     if (!email) {
         showAuthStatus('Please enter your email address', 'error');
@@ -485,10 +447,8 @@ function handleEmailSubmit() {
         return;
     }
     
-    console.log('Setting currentUserEmail to:', email);
     currentUserEmail = email;
     isInAuthFlow = true; // Set flag to prevent auth state interference
-    console.log('Calling showPasswordStep()');
     showPasswordStep();
 }
 

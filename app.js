@@ -483,7 +483,9 @@ function handlePasswordSubmit() {
             
             let errorMessage = 'Login failed. Please check your credentials.';
             
-            if (error.code === 'auth/user-not-found') {
+            if (error.code === 'demo/disabled') {
+                errorMessage = 'Demo Mode: Authentication is disabled. This UI flow is working correctly!';
+            } else if (error.code === 'auth/user-not-found') {
                 errorMessage = 'No account found with this email. Would you like to register?';
             } else if (error.code === 'auth/wrong-password') {
                 errorMessage = 'Incorrect password. Try again or reset your password.';
@@ -495,7 +497,7 @@ function handlePasswordSubmit() {
                 errorMessage = 'Firebase API key not configured. Please set up your Firebase credentials.';
             }
             
-            showAuthStatus(errorMessage, 'error');
+            showAuthStatus(errorMessage, error.code === 'demo/disabled' ? 'info' : 'error');
         });
 }
 
@@ -690,8 +692,19 @@ function showAuthStatus(message, type) {
 
 // Check if Firebase is properly configured
 function checkFirebaseConfig() {
-    const config = window.appConfig;
-    if (!config || !config.firebase) {
+    const config = window.AppConfig;
+    if (!config) {
+        showAuthStatus('Configuration not loaded. Please refresh the page.', 'error');
+        return false;
+    }
+    
+    // Allow demo mode
+    if (config.demoMode) {
+        showAuthStatus('Demo mode: Authentication is disabled for UI testing only.', 'info');
+        return false;
+    }
+    
+    if (!config.firebase) {
         showAuthStatus('Firebase configuration not loaded. Please check config.js', 'error');
         return false;
     }

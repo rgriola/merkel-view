@@ -10,10 +10,28 @@
             return;
         }
         
-        const firebaseConfig = window.AppConfig.firebase;
+        const config = window.AppConfig;
+        
+        // Check if demo mode - skip Firebase initialization
+        if (config.demoMode) {
+            console.log('🎭 Demo mode enabled - Firebase disabled for UI testing');
+            
+            // Create mock Firebase objects for UI testing
+            window.auth = createMockAuth();
+            window.db = createMockFirestore();
+            window.storage = createMockStorage();
+            
+            // Dispatch ready event
+            const event = new CustomEvent('firebaseReady');
+            window.dispatchEvent(event);
+            console.log('🎭 Mock Firebase services ready for UI testing');
+            return;
+        }
+        
+        const firebaseConfig = config.firebase;
         
         // Validate configuration
-        if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes('your-') || firebaseConfig.apiKey.includes('demo-')) {
+        if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey.includes('your-') || firebaseConfig.apiKey.includes('demo-')) {
             console.warn('⚠️ Firebase configuration appears to be using placeholder values');
             console.warn('Please update config.js with your actual Firebase credentials');
             
@@ -23,7 +41,7 @@
             warning.innerHTML = `
                 <div style="position: fixed; top: 0; left: 0; right: 0; background: #ff9800; color: white; padding: 12px; text-align: center; z-index: 9999; font-family: Arial, sans-serif;">
                     ⚠️ <strong>Configuration Required:</strong> Please update config.js with your Firebase credentials. 
-                    <a href="https://github.com/rgriola/merkel-view#setup" target="_blank" style="color: white; text-decoration: underline;">See Setup Guide</a>
+                    <a href="#" onclick="window.location.reload()" style="color: white; text-decoration: underline;">Reload</a> or switch to demo mode
                     <button onclick="this.parentElement.parentElement.remove()" style="float: right; background: none; border: none; color: white; cursor: pointer; font-size: 16px;">×</button>
                 </div>
             `;
@@ -87,4 +105,101 @@
     // Global initialization function for backwards compatibility
     window.initializeFirebase = initializeFirebase;
     
+    // Mock Firebase functions for demo mode
+    function createMockAuth() {
+        return {
+            onAuthStateChanged: function(callback) {
+                // Simulate no user logged in
+                setTimeout(() => callback(null), 100);
+                return () => {}; // unsubscribe function
+            },
+            signInWithEmailAndPassword: function(email, password) {
+                return Promise.reject({
+                    code: 'demo/disabled',
+                    message: 'Authentication disabled in demo mode. This is for UI testing only.'
+                });
+            },
+            createUserWithEmailAndPassword: function(email, password) {
+                return Promise.reject({
+                    code: 'demo/disabled',
+                    message: 'Registration disabled in demo mode. This is for UI testing only.'
+                });
+            },
+            sendPasswordResetEmail: function(email) {
+                return Promise.reject({
+                    code: 'demo/disabled',
+                    message: 'Password reset disabled in demo mode. This is for UI testing only.'
+                });
+            },
+            signOut: function() {
+                return Promise.resolve();
+            }
+        };
+    }
+    
+    function createMockFirestore() {
+        return {
+            collection: function(path) {
+                return {
+                    add: function(data) {
+                        return Promise.reject({
+                            message: 'Database disabled in demo mode. This is for UI testing only.'
+                        });
+                    },
+                    doc: function(id) {
+                        return {
+                            set: function(data) {
+                                return Promise.resolve();
+                            },
+                            update: function(data) {
+                                return Promise.resolve();
+                            },
+                            get: function() {
+                                return Promise.resolve({
+                                    exists: false,
+                                    data: () => null
+                                });
+                            },
+                            delete: function() {
+                                return Promise.resolve();
+                            }
+                        };
+                    },
+                    onSnapshot: function(callback) {
+                        // Return empty snapshot
+                        setTimeout(() => callback({ forEach: () => {} }), 100);
+                        return () => {}; // unsubscribe function
+                    },
+                    orderBy: function() { return this; },
+                    where: function() { return this; },
+                    limit: function() { return this; }
+                };
+            }
+        };
+    }
+    
+    function createMockStorage() {
+        return {
+            ref: function(path) {
+                return {
+                    put: function(file) {
+                        return Promise.reject({
+                            message: 'Storage disabled in demo mode. This is for UI testing only.'
+                        });
+                    },
+                    getDownloadURL: function() {
+                        return Promise.reject({
+                            message: 'Storage disabled in demo mode.'
+                        });
+                    },
+                    delete: function() {
+                        return Promise.resolve();
+                    }
+                };
+            }
+        };
+    }
+    
+    // Start initialization
+    initializeFirebase();
 })();

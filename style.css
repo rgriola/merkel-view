@@ -36,6 +36,141 @@ body {
     font-weight: 300;
 }
 
+/* Auth Steps */
+.auth-step {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2rem;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 1rem;
+}
+
+.auth-step h2 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    font-weight: 400;
+}
+
+.auth-step p {
+    margin-bottom: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
+}
+
+.registration-notice {
+    background: rgba(255, 193, 7, 0.2);
+    padding: 1rem;
+    border-radius: 5px;
+    border-left: 4px solid #ffc107;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.form-row {
+    display: flex;
+    gap: 10px;
+}
+
+.form-row input {
+    flex: 1;
+}
+
+.auth-step input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+}
+
+.auth-step input:focus {
+    outline: none;
+    background: white;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.auth-step button[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    margin: 15px 0 10px 0;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #4CAF50;
+    color: white;
+}
+
+.auth-step button[type="submit"]:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+}
+
+.auth-links {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.link-btn {
+    background: transparent !important;
+    border: none !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: underline;
+    margin: 5px 10px;
+    padding: 5px 0;
+}
+
+.link-btn:hover {
+    color: white !important;
+    text-decoration: none;
+}
+
+.verification-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 1.5rem 0;
+}
+
+.verification-actions button {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#resend-verification-btn {
+    background: #ff9800;
+    color: white;
+}
+
+#resend-verification-btn:hover {
+    background: #f57c00;
+}
+
+#refresh-verification-btn {
+    background: #2196F3;
+    color: white;
+}
+
+#refresh-verification-btn:hover {
+    background: #1976D2;
+}
+
+/* Legacy form styles for backwards compatibility */
 #login-form {
     background: rgba(255, 255, 255, 0.1);
     padding: 2rem;

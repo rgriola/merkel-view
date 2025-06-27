@@ -16,16 +16,81 @@
     <!-- Authentication Section -->
     <div id="auth-container">
         <h1>Merkel View</h1>
-        <form id="login-form">
-            <input type="email" id="email" placeholder="Email" required autocomplete="email">
-            <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
-            <button type="submit" id="login-btn">Login</button>
-            <button type="button" id="register-btn">Register</button>
-            <button type="button" id="forgot-password-btn" class="forgot-password-link">Forgot Password?</button>
-            <small id="forgot-password-help" style="display: none; color: rgba(255,255,255,0.8); margin-top: 10px; font-size: 12px;">
-                Enter your email above and click "Forgot Password?" to receive a reset link.
-            </small>
-        </form>
+        
+        <!-- Step 1: Email Entry -->
+        <div id="email-step" class="auth-step">
+            <h2>Welcome Back</h2>
+            <p>Enter your email to get started</p>
+            <form id="email-form">
+                <input type="email" id="email-input" placeholder="Email" required autocomplete="email">
+                <button type="submit" id="email-continue-btn">Continue</button>
+            </form>
+            <div class="auth-links">
+                <button type="button" id="show-register-btn" class="link-btn">Don't have an account? Register</button>
+            </div>
+        </div>
+        
+        <!-- Step 2: Password Entry -->
+        <div id="password-step" class="auth-step" style="display: none;">
+            <h2>Enter Password</h2>
+            <p id="password-email-display"></p>
+            <form id="password-form">
+                <input type="password" id="password-input" placeholder="Password" required autocomplete="current-password">
+                <button type="submit" id="password-login-btn">Sign In</button>
+            </form>
+            <div class="auth-links">
+                <button type="button" id="forgot-password-btn" class="link-btn">Forgot Password?</button>
+                <button type="button" id="back-to-email-btn" class="link-btn">Back to email</button>
+            </div>
+        </div>
+        
+        <!-- Registration Form -->
+        <div id="register-step" class="auth-step" style="display: none;">
+            <h2>Create Account</h2>
+            <p class="registration-notice">All fields are required. You'll need to verify your email before accessing the app.</p>
+            <form id="register-form">
+                <div class="form-row">
+                    <input type="text" id="first-name" placeholder="First Name" required>
+                    <input type="text" id="last-name" placeholder="Last Name" required>
+                </div>
+                <input type="email" id="register-email" placeholder="Email" required autocomplete="email">
+                <input type="tel" id="phone" placeholder="Phone Number" required>
+                <input type="password" id="register-password" placeholder="Password (min 6 characters)" required minlength="6">
+                <input type="password" id="confirm-password" placeholder="Confirm Password" required minlength="6">
+                <button type="submit" id="register-submit-btn">Create Account</button>
+            </form>
+            <div class="auth-links">
+                <button type="button" id="back-to-login-btn" class="link-btn">Already have an account? Sign In</button>
+            </div>
+        </div>
+        
+        <!-- Password Reset -->
+        <div id="password-reset-step" class="auth-step" style="display: none;">
+            <h2>Reset Password</h2>
+            <p>Enter your email address and we'll send you a link to reset your password.</p>
+            <form id="password-reset-form">
+                <input type="email" id="reset-email" placeholder="Email" required autocomplete="email">
+                <button type="submit" id="send-reset-btn">Send Reset Link</button>
+            </form>
+            <div class="auth-links">
+                <button type="button" id="back-to-password-btn" class="link-btn">Back to Sign In</button>
+            </div>
+        </div>
+        
+        <!-- Email Verification -->
+        <div id="email-verification-step" class="auth-step" style="display: none;">
+            <h2>Verify Your Email</h2>
+            <p>We've sent a verification email to <span id="verification-email-display"></span></p>
+            <p>Please check your inbox and click the verification link before continuing.</p>
+            <div class="verification-actions">
+                <button type="button" id="resend-verification-btn">Resend Verification Email</button>
+                <button type="button" id="refresh-verification-btn">I've Verified - Continue</button>
+            </div>
+            <div class="auth-links">
+                <button type="button" id="logout-from-verification-btn" class="link-btn">Use Different Account</button>
+            </div>
+        </div>
+        
         <div id="auth-status"></div>
     </div>
 

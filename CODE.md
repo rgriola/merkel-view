@@ -33,6 +33,12 @@ locations: {
 users: {
   id: auto,
   email: string,
-  name: string,
-  role: string
+  firstName: string,
+  lastName: string,
+  fullName: string,
+  phone: string,
+  role: string,
+  emailVerified: boolean,
+  dateCreated: timestamp,
+  dateUpdated: timestamp
 }

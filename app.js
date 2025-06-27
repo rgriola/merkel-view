@@ -5,10 +5,18 @@ let geocoder = null;
 let tempMarker = null;
 let selectedLocation = null;
 let auth, db, storage;
+let currentUserEmail = ''; // Store email for multi-step auth
 
 // DOM elements (will be queried when needed)
-let authContainer, appContainer, loginForm, emailInput, passwordInput;
-let registerBtn, logoutBtn, authStatus, userEmailDisplay, forgotPasswordBtn;
+let authContainer, appContainer;
+let emailStep, passwordStep, registerStep, passwordResetStep, emailVerificationStep;
+let emailForm, emailInput, emailContinueBtn;
+let passwordForm, passwordInput, passwordLoginBtn, passwordEmailDisplay;
+let registerForm, firstNameInput, lastNameInput, registerEmailInput, phoneInput, registerPasswordInput, confirmPasswordInput;
+let passwordResetForm, resetEmailInput;
+let showRegisterBtn, backToEmailBtn, forgotPasswordBtn, backToPasswordBtn, backToLoginBtn;
+let resendVerificationBtn, refreshVerificationBtn, logoutFromVerificationBtn;
+let logoutBtn, authStatus, userEmailDisplay;
 let addressSearch, searchBtn, addLocationBtn, locationModal, locationForm;
 let closeModal, cancelLocation;
 
@@ -82,17 +90,54 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Initialize DOM elements
 function initializeDOMElements() {
-    // Auth elements
+    // Main containers
     authContainer = document.getElementById('auth-container');
     appContainer = document.getElementById('app-container');
-    loginForm = document.getElementById('login-form');
-    emailInput = document.getElementById('email');
-    passwordInput = document.getElementById('password');
-    registerBtn = document.getElementById('register-btn');
+    
+    // Authentication steps
+    emailStep = document.getElementById('email-step');
+    passwordStep = document.getElementById('password-step');
+    registerStep = document.getElementById('register-step');
+    passwordResetStep = document.getElementById('password-reset-step');
+    emailVerificationStep = document.getElementById('email-verification-step');
+    
+    // Forms and inputs
+    emailForm = document.getElementById('email-form');
+    emailInput = document.getElementById('email-input');
+    emailContinueBtn = document.getElementById('email-continue-btn');
+    
+    passwordForm = document.getElementById('password-form');
+    passwordInput = document.getElementById('password-input');
+    passwordLoginBtn = document.getElementById('password-login-btn');
+    passwordEmailDisplay = document.getElementById('password-email-display');
+    
+    registerForm = document.getElementById('register-form');
+    firstNameInput = document.getElementById('first-name');
+    lastNameInput = document.getElementById('last-name');
+    registerEmailInput = document.getElementById('register-email');
+    phoneInput = document.getElementById('phone');
+    registerPasswordInput = document.getElementById('register-password');
+    confirmPasswordInput = document.getElementById('confirm-password');
+    
+    passwordResetForm = document.getElementById('password-reset-form');
+    resetEmailInput = document.getElementById('reset-email');
+    
+    // Navigation buttons
+    showRegisterBtn = document.getElementById('show-register-btn');
+    backToEmailBtn = document.getElementById('back-to-email-btn');
+    forgotPasswordBtn = document.getElementById('forgot-password-btn');
+    backToPasswordBtn = document.getElementById('back-to-password-btn');
+    backToLoginBtn = document.getElementById('back-to-login-btn');
+    
+    // Verification buttons
+    resendVerificationBtn = document.getElementById('resend-verification-btn');
+    refreshVerificationBtn = document.getElementById('refresh-verification-btn');
+    logoutFromVerificationBtn = document.getElementById('logout-from-verification-btn');
+    
+    // App elements
     logoutBtn = document.getElementById('logout-btn');
     authStatus = document.getElementById('auth-status');
     userEmailDisplay = document.getElementById('user-email-display');
-    forgotPasswordBtn = document.getElementById('forgot-password-btn');
 
     // Map and location elements
     addressSearch = document.getElementById('address-search');
@@ -191,12 +236,20 @@ function setupLocationListeners() {
 }
 
 // Set up authentication event listeners
+// Set up authentication event listeners
 function setupAuthListeners() {
     // Listen for authentication state changes
     auth.onAuthStateChanged(function(user) {
         if (user) {
             // User is signed in
             currentUser = user;
+            
+            // Check if email is verified
+            if (!user.emailVerified) {
+                showEmailVerificationStep(user.email);
+                return;
+            }
+            
             showApp();
             if (userEmailDisplay) {
                 userEmailDisplay.textContent = user.email;
@@ -204,50 +257,79 @@ function setupAuthListeners() {
         } else {
             // User is signed out
             currentUser = null;
-            showAuth();
+            showEmailStep();
         }
     });
 
-    // Login form submission
-    loginForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        login();
-    });
-
-    // Register button
-    registerBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        register();
-    });
-
-    // Forgot password button
-    if (forgotPasswordBtn) {
-        forgotPasswordBtn.addEventListener('click', function(e) {
+    // Step 1: Email form
+    if (emailForm) {
+        emailForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            resetPassword();
-        });
-    }
-    
-    // Show help text when email field is focused
-    if (emailInput) {
-        emailInput.addEventListener('focus', function() {
-            const helpText = document.getElementById('forgot-password-help');
-            if (helpText && !passwordInput.value) {
-                helpText.style.display = 'block';
-            }
-        });
-        
-        emailInput.addEventListener('blur', function() {
-            const helpText = document.getElementById('forgot-password-help');
-            if (helpText) {
-                setTimeout(() => {
-                    helpText.style.display = 'none';
-                }, 3000);
-            }
+            handleEmailSubmit();
         });
     }
 
-    // Logout button
+    // Step 2: Password form
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handlePasswordSubmit();
+        });
+    }
+
+    // Step 3: Registration form
+    if (registerForm) {
+        registerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleRegistrationSubmit();
+        });
+    }
+
+    // Password reset form
+    if (passwordResetForm) {
+        passwordResetForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handlePasswordReset();
+        });
+    }
+
+    // Navigation buttons
+    if (showRegisterBtn) {
+        showRegisterBtn.addEventListener('click', showRegistrationStep);
+    }
+
+    if (backToEmailBtn) {
+        backToEmailBtn.addEventListener('click', showEmailStep);
+    }
+
+    if (forgotPasswordBtn) {
+        forgotPasswordBtn.addEventListener('click', showPasswordResetStep);
+    }
+
+    if (backToPasswordBtn) {
+        backToPasswordBtn.addEventListener('click', showPasswordStep);
+    }
+
+    if (backToLoginBtn) {
+        backToLoginBtn.addEventListener('click', showEmailStep);
+    }
+
+    // Verification buttons
+    if (resendVerificationBtn) {
+        resendVerificationBtn.addEventListener('click', resendVerificationEmail);
+    }
+
+    if (refreshVerificationBtn) {
+        refreshVerificationBtn.addEventListener('click', checkEmailVerification);
+    }
+
+    if (logoutFromVerificationBtn) {
+        logoutFromVerificationBtn.addEventListener('click', function() {
+            auth.signOut();
+        });
+    }
+
+    // Main app logout button
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function() {
             auth.signOut();
@@ -255,52 +337,160 @@ function setupAuthListeners() {
     }
 }
 
-// Show authentication form
+// Authentication Step Navigation Functions
+function showEmailStep() {
+    hideAllAuthSteps();
+    if (emailStep) {
+        emailStep.style.display = 'block';
+        if (emailInput) emailInput.focus();
+    }
+    currentUserEmail = '';
+}
+
+function showPasswordStep() {
+    hideAllAuthSteps();
+    if (passwordStep) {
+        passwordStep.style.display = 'block';
+        if (passwordEmailDisplay) {
+            passwordEmailDisplay.textContent = currentUserEmail;
+        }
+        if (passwordInput) {
+            passwordInput.focus();
+            passwordInput.value = '';
+        }
+    }
+}
+
+function showRegistrationStep() {
+    hideAllAuthSteps();
+    if (registerStep) {
+        registerStep.style.display = 'block';
+        if (registerEmailInput) {
+            registerEmailInput.value = currentUserEmail;
+        }
+        if (firstNameInput) firstNameInput.focus();
+    }
+}
+
+function showPasswordResetStep() {
+    hideAllAuthSteps();
+    if (passwordResetStep) {
+        passwordResetStep.style.display = 'block';
+        if (resetEmailInput) {
+            resetEmailInput.value = currentUserEmail;
+            resetEmailInput.focus();
+        }
+    }
+}
+
+function showEmailVerificationStep(email) {
+    hideAllAuthSteps();
+    if (emailVerificationStep) {
+        emailVerificationStep.style.display = 'block';
+        const verificationEmailSpan = document.getElementById('verification-email-display');
+        if (verificationEmailSpan) {
+            verificationEmailSpan.textContent = email;
+        }
+    }
+}
+
+function hideAllAuthSteps() {
+    const steps = [emailStep, passwordStep, registerStep, passwordResetStep, emailVerificationStep];
+    steps.forEach(step => {
+        if (step) step.style.display = 'none';
+    });
+}
+
+// Show authentication container
 function showAuth() {
-    authContainer.style.display = 'block';
-    appContainer.style.display = 'none';
+    if (authContainer) authContainer.style.display = 'flex';
+    if (appContainer) appContainer.style.display = 'none';
+    showEmailStep();
 }
 
 // Show main app
 function showApp() {
-    authContainer.style.display = 'none';
-    appContainer.style.display = 'block';
+    if (authContainer) authContainer.style.display = 'none';
+    if (appContainer) appContainer.style.display = 'block';
     // Initialize map after showing app (if not already initialized)
     if (!map && typeof window.google !== 'undefined') {
         initMap();
     }
 }
 
-// Login function
-function login() {
+// Authentication Flow Handlers
+function handleEmailSubmit() {
     const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
     
-    if (!email || !password) {
-        showAuthStatus('Please enter both email and password', 'error');
+    if (!email) {
+        showAuthStatus('Please enter your email address', 'error');
         return;
     }
     
-    showAuthStatus('Logging in...', 'info');
+    if (!isValidEmail(email)) {
+        showAuthStatus('Please enter a valid email address', 'error');
+        return;
+    }
     
-    auth.signInWithEmailAndPassword(email, password)
+    currentUserEmail = email;
+    showPasswordStep();
+}
+
+function handlePasswordSubmit() {
+    const password = passwordInput.value.trim();
+    
+    if (!password) {
+        showAuthStatus('Please enter your password', 'error');
+        return;
+    }
+    
+    showAuthStatus('Signing in...', 'info');
+    
+    auth.signInWithEmailAndPassword(currentUserEmail, password)
         .then((userCredential) => {
             console.log('User logged in:', userCredential.user.email);
             showAuthStatus('Login successful!', 'success');
         })
         .catch((error) => {
             console.error('Login error:', error);
-            showAuthStatus('Login failed: ' + error.message, 'error');
+            
+            let errorMessage = 'Login failed. Please check your credentials.';
+            
+            if (error.code === 'auth/user-not-found') {
+                errorMessage = 'No account found with this email. Would you like to register?';
+            } else if (error.code === 'auth/wrong-password') {
+                errorMessage = 'Incorrect password. Try again or reset your password.';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = 'Please enter a valid email address.';
+            } else if (error.code === 'auth/user-disabled') {
+                errorMessage = 'This account has been disabled.';
+            }
+            
+            showAuthStatus(errorMessage, 'error');
         });
 }
 
-// Register function
-function register() {
-    const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
+function handleRegistrationSubmit() {
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+    const email = registerEmailInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const password = registerPasswordInput.value.trim();
+    const confirmPassword = confirmPasswordInput.value.trim();
     
-    if (!email || !password) {
-        showAuthStatus('Please enter both email and password', 'error');
+    // Validation
+    if (!firstName || !lastName || !email || !phone || !password || !confirmPassword) {
+        showAuthStatus('All fields are required', 'error');
+        return;
+    }
+    
+    if (!isValidEmail(email)) {
+        showAuthStatus('Please enter a valid email address', 'error');
+        return;
+    }
+    
+    if (!isValidPhone(phone)) {
+        showAuthStatus('Please enter a valid phone number', 'error');
         return;
     }
     
@@ -309,27 +499,37 @@ function register() {
         return;
     }
     
+    if (password !== confirmPassword) {
+        showAuthStatus('Passwords do not match', 'error');
+        return;
+    }
+    
     showAuthStatus('Creating account...', 'info');
     
     auth.createUserWithEmailAndPassword(email, password)
         .then((userCredential) => {
             console.log('User registered:', userCredential.user.email);
-            showAuthStatus('Account created successfully!', 'success');
             
-            // Save user profile to Firestore (optional, comment out if causing issues)
-            return db.collection('users').doc(userCredential.user.uid).set({
-                email: userCredential.user.email,
-                name: userCredential.user.email.split('@')[0],
-                role: 'user',
-                dateCreated: firebase.firestore.FieldValue.serverTimestamp()
-            }).catch((profileError) => {
-                // Don't fail registration if profile creation fails
-                console.warn('Could not create user profile:', profileError);
-                return Promise.resolve();
-            });
-        })
-        .then(() => {
-            console.log('Registration complete');
+            // Send email verification
+            return userCredential.user.sendEmailVerification()
+                .then(() => {
+                    // Save user profile to Firestore with expanded fields
+                    return db.collection('users').doc(userCredential.user.uid).set({
+                        email: email,
+                        firstName: firstName,
+                        lastName: lastName,
+                        phone: phone,
+                        fullName: `${firstName} ${lastName}`,
+                        role: 'user',
+                        emailVerified: false,
+                        dateCreated: firebase.firestore.FieldValue.serverTimestamp(),
+                        dateUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                })
+                .then(() => {
+                    showAuthStatus('Account created! Please check your email to verify your account.', 'success');
+                    showEmailVerificationStep(email);
+                });
         })
         .catch((error) => {
             console.error('Registration error:', error);
@@ -337,7 +537,7 @@ function register() {
             
             // Handle specific error codes
             if (error.code === 'auth/email-already-in-use') {
-                errorMessage = 'An account with this email already exists';
+                errorMessage = 'An account with this email already exists. Try signing in instead.';
             } else if (error.code === 'auth/weak-password') {
                 errorMessage = 'Password should be at least 6 characters';
             } else if (error.code === 'auth/invalid-email') {
@@ -348,21 +548,16 @@ function register() {
         });
 }
 
-// Reset password function
-function resetPassword() {
-    const email = emailInput.value.trim();
+function handlePasswordReset() {
+    const email = resetEmailInput.value.trim();
     
     if (!email) {
         showAuthStatus('Please enter your email address', 'error');
-        emailInput.focus();
         return;
     }
     
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmail(email)) {
         showAuthStatus('Please enter a valid email address', 'error');
-        emailInput.focus();
         return;
     }
     
@@ -370,39 +565,76 @@ function resetPassword() {
     
     auth.sendPasswordResetEmail(email)
         .then(() => {
-            console.log('Password reset email sent to:', email);
-            showAuthStatus(
-                `Password reset email sent to ${email}. Check your inbox and follow the instructions.`, 
-                'success'
-            );
-            
-            // Clear the form
-            emailInput.value = '';
-            passwordInput.value = '';
-            
-            // Show additional instructions
+            showAuthStatus('Password reset email sent! Check your inbox for further instructions.', 'success');
             setTimeout(() => {
-                showAuthStatus(
-                    'If you don\'t see the email, check your spam folder. The reset link will expire in 1 hour.', 
-                    'info'
-                );
-            }, 5000);
+                showPasswordStep();
+            }, 3000);
         })
         .catch((error) => {
             console.error('Password reset error:', error);
-            let errorMessage = error.message;
             
-            // Handle specific error codes
+            let errorMessage = 'Failed to send password reset email.';
+            
             if (error.code === 'auth/user-not-found') {
-                errorMessage = 'No account found with this email address';
+                errorMessage = 'No account found with this email address.';
             } else if (error.code === 'auth/invalid-email') {
-                errorMessage = 'Please enter a valid email address';
-            } else if (error.code === 'auth/too-many-requests') {
-                errorMessage = 'Too many reset attempts. Please try again later.';
+                errorMessage = 'Please enter a valid email address.';
             }
             
-            showAuthStatus('Password reset failed: ' + errorMessage, 'error');
+            showAuthStatus(errorMessage, 'error');
         });
+}
+
+function resendVerificationEmail() {
+    if (currentUser) {
+        currentUser.sendEmailVerification()
+            .then(() => {
+                showAuthStatus('Verification email sent! Check your inbox.', 'success');
+            })
+            .catch((error) => {
+                console.error('Error sending verification email:', error);
+                showAuthStatus('Failed to send verification email. Please try again.', 'error');
+            });
+    }
+}
+
+function checkEmailVerification() {
+    if (currentUser) {
+        currentUser.reload()
+            .then(() => {
+                if (currentUser.emailVerified) {
+                    // Update user profile in Firestore
+                    db.collection('users').doc(currentUser.uid).update({
+                        emailVerified: true,
+                        dateUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    }).then(() => {
+                        showAuthStatus('Email verified successfully!', 'success');
+                        showApp();
+                    }).catch((error) => {
+                        console.warn('Could not update verification status:', error);
+                        showApp(); // Still show app even if Firestore update fails
+                    });
+                } else {
+                    showAuthStatus('Email not yet verified. Please check your inbox and click the verification link.', 'error');
+                }
+            })
+            .catch((error) => {
+                console.error('Error checking verification status:', error);
+                showAuthStatus('Error checking verification status. Please try again.', 'error');
+            });
+    }
+}
+
+// Utility Functions
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+function isValidPhone(phone) {
+    // Basic US phone number validation (can be enhanced)
+    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    return phoneRegex.test(phone.replace(/\D/g, ''));
 }
 
 // Show authentication status messages

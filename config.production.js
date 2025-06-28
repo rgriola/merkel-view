@@ -17,4 +17,9 @@ window.CONFIG = {
   }
 };
 
+// Set the same variables that config.js sets for compatibility
+window.AppConfig = window.CONFIG;
+window.Environment = 'production';
+
 console.log('✅ Production config loaded from fallback file');
+console.log('🌍 Environment: production');

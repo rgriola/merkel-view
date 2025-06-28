@@ -28,6 +28,8 @@ jobs:
       run: |
         cat > config.production.js << 'EOF'
         // Production configuration for GitHub Pages
+        console.log('📦 Loading production config...');
+        
         window.CONFIG = {
           environment: 'production',
           firebase: {
@@ -42,6 +44,13 @@ jobs:
             apiKey: "${{ secrets.GOOGLE_MAPS_API_KEY }}"
           }
         };
+        
+        // Set the same variables that config.js sets for compatibility
+        window.AppConfig = window.CONFIG;
+        window.Environment = 'production';
+        
+        console.log('✅ Production config loaded from GitHub Actions');
+        console.log('🌍 Environment: production');
         EOF
 
     - name: Verify config file was created

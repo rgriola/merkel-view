@@ -205,11 +205,11 @@
     <script>
         // Load appropriate config based on environment
         if (window.location.hostname.includes('github.io')) {
-            // GitHub Pages - load production config if it exists
+            // GitHub Pages - try to load production config, fallback to regular config
             const script = document.createElement('script');
             script.src = 'config.production.js';
             script.onerror = () => {
-                // Fallback to regular config if production config doesn't exist
+                console.log('Production config not found, using regular config');
                 const fallbackScript = document.createElement('script');
                 fallbackScript.src = 'config.js';
                 document.head.appendChild(fallbackScript);

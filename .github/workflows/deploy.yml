@@ -29,8 +29,33 @@ jobs:
       
     - name: Create production config
       run: |
-        # Update config.js to use GitHub environment by default when on GitHub Pages
-        sed -i 's/return '\''development'\'';/return '\''github'\'';/g' config.js
+        cat > config.production.js << 'EOF'
+        // Production configuration for GitHub Pages
+        const Config = {
+          github: {
+            firebase: {
+              apiKey: "${{ secrets.FIREBASE_API_KEY }}",
+              authDomain: "${{ secrets.FIREBASE_AUTH_DOMAIN }}",
+              projectId: "${{ secrets.FIREBASE_PROJECT_ID }}",
+              storageBucket: "${{ secrets.FIREBASE_STORAGE_BUCKET }}",
+              messagingSenderId: "${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}",
+              appId: "${{ secrets.FIREBASE_APP_ID }}",
+              measurementId: "${{ secrets.FIREBASE_MEASUREMENT_ID }}"
+            },
+            googleMaps: {
+              apiKey: "${{ secrets.GOOGLE_MAPS_API_KEY }}"
+            }
+          }
+        };
+        
+        // Override environment detection for GitHub Pages
+        const getEnvironment = () => 'github';
+        const getCurrentConfig = () => Config.github;
+        
+        window.AppConfig = getCurrentConfig();
+        window.Environment = getEnvironment();
+        console.log('📋 GitHub Pages configuration loaded');
+        EOF
         
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3

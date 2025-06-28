@@ -56,9 +56,17 @@ const AppState = {
 // Initialize app when page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 App starting...');
+    console.log('🔍 DOM loaded, checking Firebase...');
+    console.log('🔍 window.firebase:', typeof window.firebase);
+    console.log('🔍 firebase apps:', window.firebase ? window.firebase.apps : 'no firebase');
     
     // Wait for Firebase to be ready
     function initializeApp() {
+        console.log('🚀 initializeApp called');
+        console.log('🔍 window.auth:', window.auth ? 'present' : 'missing');
+        console.log('🔍 window.db:', window.db ? 'present' : 'missing');
+        console.log('🔍 window.storage:', window.storage ? 'present' : 'missing');
+        
         if (!window.auth || !window.db || !window.storage) {
             console.log('⏳ Waiting for Firebase services...');
             setTimeout(initializeApp, 100);

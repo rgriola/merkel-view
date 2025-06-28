@@ -71,12 +71,15 @@ document.addEventListener('DOMContentLoaded', function() {
         storage = window.storage;
         
         // Get DOM elements
+        console.log('🔍 Calling initializeDOMElements...');
         initializeDOMElements();
         
         // Set up authentication listeners
+        console.log('🔍 Calling setupAuthListeners...');
         setupAuthListeners();
         
         // Set up map and location listeners
+        console.log('🔍 Calling setupLocationListeners...');
         setupLocationListeners();
         
         console.log('✅ App initialized successfully');
@@ -106,6 +109,11 @@ function initializeDOMElements() {
     emailForm = document.getElementById('email-form');
     emailInput = document.getElementById('email-input');
     emailContinueBtn = document.getElementById('email-continue-btn');
+    
+    console.log('🔍 DOM Elements Check:');
+    console.log('- emailForm:', emailForm ? '✅' : '❌');
+    console.log('- emailInput:', emailInput ? '✅' : '❌');
+    console.log('- emailContinueBtn:', emailContinueBtn ? '✅' : '❌');
     
     passwordForm = document.getElementById('password-form');
     passwordInput = document.getElementById('password-input');
@@ -269,10 +277,14 @@ function setupAuthListeners() {
 
     // Step 1: Email form
     if (emailForm) {
+        console.log('✅ Setting up email form listener');
         emailForm.addEventListener('submit', function(e) {
+            console.log('📧 Email form submit event triggered');
             e.preventDefault();
             handleEmailSubmit();
         });
+    } else {
+        console.log('❌ Email form not found');
     }
 
     // Step 2: Password form

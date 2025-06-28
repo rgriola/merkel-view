@@ -210,7 +210,7 @@
                     // GitHub Pages - try to load production config, fallback to regular config
                     console.log('🌍 Loading production config for GitHub Pages...');
                     const script = document.createElement('script');
-                    script.src = 'config.production.js?' + Date.now(); // Cache busting
+                    script.src = 'config.production.js?v=' + Math.random(); // Force fresh load
                     script.onload = () => {
                         console.log('✅ Production config loaded successfully');
                         resolve();
@@ -218,7 +218,7 @@
                     script.onerror = () => {
                         console.log('⚠️ Production config not found, using regular config');
                         const fallbackScript = document.createElement('script');
-                        fallbackScript.src = 'config.js?' + Date.now();
+                        fallbackScript.src = 'config.js?v=' + Math.random();
                         fallbackScript.onload = () => {
                             console.log('✅ Fallback config loaded');
                             resolve();
@@ -234,7 +234,7 @@
                     // Local development - load regular config
                     console.log('🏠 Loading development config...');
                     const script = document.createElement('script');
-                    script.src = 'config.js?' + Date.now();
+                    script.src = 'config.js?v=' + Math.random();
                     script.onload = () => {
                         console.log('✅ Development config loaded');
                         resolve();
@@ -252,7 +252,7 @@
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const script = document.createElement('script');
-                script.src = src + '?' + Date.now(); // Cache busting
+                script.src = src + '?v=' + Math.random(); // Force fresh load
                 script.onload = () => {
                     console.log(`✅ Loaded: ${src}`);
                     resolve();

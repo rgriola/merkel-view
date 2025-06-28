@@ -95,6 +95,53 @@
         <div id="auth-status"></div>
     </div>
 
+    <!-- App Container -->
+    <div id="app-container" style="display: none;">
+        <div class="app-header">
+            <h1>Merkel View</h1>
+            <div class="user-info">
+                <span>Welcome, <span id="user-email-display"></span></span>
+                <button id="logout-btn">Logout</button>
+            </div>
+        </div>
+        
+        <div class="map-controls">
+            <input type="text" id="address-search" placeholder="Search for an address...">
+            <button id="search-btn">Search</button>
+            <button id="add-location-btn">Add Location</button>
+        </div>
+        
+        <div id="map" style="height: 500px; width: 100%;"></div>
+        
+        <div id="locations-list">
+            <h3>Your Locations</h3>
+            <div id="locations-container"></div>
+        </div>
+    </div>
+
+    <!-- Location Modal -->
+    <div id="location-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" id="close-modal">&times;</span>
+            <h2>Add New Location</h2>
+            <form id="location-form">
+                <input type="text" id="location-name" placeholder="Location Name" required>
+                <textarea id="location-description" placeholder="Description"></textarea>
+                <select id="location-category">
+                    <option value="business">Business</option>
+                    <option value="restaurant">Restaurant</option>
+                    <option value="landmark">Landmark</option>
+                    <option value="other">Other</option>
+                </select>
+                <input type="file" id="location-photo" accept="image/*">
+                <div class="modal-buttons">
+                    <button type="submit">Save Location</button>
+                    <button type="button" id="cancel-location">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Main App Section (hidden until authenticated) -->
     <div id="app-container" style="display: none;">
         <div class="app-header">
@@ -203,94 +250,255 @@
 
     <!-- Scripts -->
     <script>
-        // Load appropriate config based on environment and then load other scripts
-        function loadConfig() {
-            return new Promise((resolve, reject) => {
-                if (window.location.hostname.includes('github.io')) {
-                    // GitHub Pages - try to load production config, fallback to regular config
-                    console.log('🌍 Loading production config for GitHub Pages...');
-                    const script = document.createElement('script');
-                    script.src = 'config.production.js?v=' + Math.random(); // Force fresh load
-                    script.onload = () => {
-                        console.log('✅ Production config loaded successfully');
-                        resolve();
-                    };
-                    script.onerror = () => {
-                        console.log('⚠️ Production config not found, using regular config');
-                        const fallbackScript = document.createElement('script');
-                        fallbackScript.src = 'config.js?v=' + Math.random();
-                        fallbackScript.onload = () => {
-                            console.log('✅ Fallback config loaded');
-                            resolve();
-                        };
-                        fallbackScript.onerror = () => {
-                            console.error('❌ Failed to load any config file');
-                            reject(new Error('Failed to load config'));
-                        };
-                        document.head.appendChild(fallbackScript);
-                    };
-                    document.head.appendChild(script);
-                } else {
-                    // Local development - load regular config
-                    console.log('🏠 Loading development config...');
-                    const script = document.createElement('script');
-                    script.src = 'config.js?v=' + Math.random();
-                    script.onload = () => {
-                        console.log('✅ Development config loaded');
-                        resolve();
-                    };
-                    script.onerror = () => {
-                        console.error('❌ Failed to load config.js');
-                        reject(new Error('Failed to load config.js'));
-                    };
-                    document.head.appendChild(script);
-                }
-            });
-        }
-        
-        // Load scripts in order after config is ready
-        function loadScript(src) {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = src + '?v=' + Math.random(); // Force fresh load
-                script.onload = () => {
-                    console.log(`✅ Loaded: ${src}`);
-                    resolve();
-                };
-                script.onerror = () => {
-                    console.error(`❌ Failed to load: ${src}`);
-                    reject(new Error(`Failed to load ${src}`));
-                };
-                document.head.appendChild(script);
-            });
-        }
-        
-        // Initialize the app
-        async function initializeApp() {
-            try {
-                console.log('🚀 Initializing Merkel View...');
-                
-                // 1. Load config first
-                await loadConfig();
-                console.log('📋 Config ready, loading other scripts...');
-                
-                // 2. Load scripts in order
-                await loadScript('firebase-init.js');
-                await loadScript('maps-loader.js');
-                await loadScript('app.js');
-                
-                console.log('🎉 All scripts loaded successfully!');
-            } catch (error) {
-                console.error('💥 Failed to initialize app:', error);
+        // Load development config directly
+        window.AppConfig = {
+            firebase: {
+                apiKey: "AIzaSyDF0CuVLAINPOW3vpe_WeUr3NbTF6V-SSY",
+                authDomain: "merkel-view.firebaseapp.com",
+                projectId: "merkel-view",
+                storageBucket: "merkel-view.firebasestorage.app",
+                messagingSenderId: "1088247347834",
+                appId: "1:1088247347834:web:ee94e04adf2e2faebc99c3"
+            },
+            googleMaps: {
+                apiKey: "AIzaSyCHQECnK2DXcNXIQR0ZfvIEPrAJWIH8JsM"
             }
-        }
+        };
+        window.Environment = 'development';
+        console.log('📋 Config loaded directly');
+    </script>
+
+    <script>
+        // Firebase initialization
+        console.log('🔥 Initializing Firebase...');
         
-        // Start initialization when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeApp);
-        } else {
-            initializeApp();
+        try {
+            firebase.initializeApp(window.AppConfig.firebase);
+            window.auth = firebase.auth();
+            window.db = firebase.firestore();
+            window.storage = firebase.storage();
+            console.log('🔥 Firebase initialized successfully');
+        } catch (error) {
+            console.error('❌ Firebase initialization failed:', error);
         }
+    </script>
+
+    <script>
+        // App logic
+        let currentUserEmail = '';
+        let currentUser = null;
+        let map = null;
+        let geocoder = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 App starting...');
+            
+            // Get DOM elements
+            const emailForm = document.getElementById('email-form');
+            const emailInput = document.getElementById('email-input');
+            const emailStep = document.getElementById('email-step');
+            const passwordStep = document.getElementById('password-step');
+            const passwordForm = document.getElementById('password-form');
+            const passwordInput = document.getElementById('password-input');
+            const passwordEmailDisplay = document.getElementById('password-email-display');
+            const authContainer = document.getElementById('auth-container');
+            const appContainer = document.getElementById('app-container');
+            const logoutBtn = document.getElementById('logout-btn');
+            const backToEmailBtn = document.getElementById('back-to-email-btn');
+            
+            console.log('🔍 DOM Elements Check:');
+            console.log('- emailForm:', emailForm ? '✅' : '❌');
+            console.log('- emailInput:', emailInput ? '✅' : '❌');
+            console.log('- passwordStep:', passwordStep ? '✅' : '❌');
+            
+            // Email form handler
+            if (emailForm) {
+                console.log('✅ Setting up email form listener');
+                emailForm.addEventListener('submit', function(e) {
+                    console.log('📧 Email form submit event triggered');
+                    e.preventDefault();
+                    
+                    const email = emailInput.value.trim();
+                    console.log('📧 Email value:', email);
+                    
+                    if (email && isValidEmail(email)) {
+                        currentUserEmail = email;
+                        showPasswordStep();
+                    } else {
+                        showAuthStatus('Please enter a valid email address', 'error');
+                    }
+                });
+            }
+            
+            // Password form handler
+            if (passwordForm) {
+                passwordForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const password = passwordInput.value.trim();
+                    
+                    if (password) {
+                        console.log('🔑 Attempting login...');
+                        loginUser(currentUserEmail, password);
+                    }
+                });
+            }
+            
+            // Back to email handler
+            if (backToEmailBtn) {
+                backToEmailBtn.addEventListener('click', function() {
+                    showEmailStep();
+                });
+            }
+            
+            // Logout handler
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function() {
+                    if (window.auth) {
+                        window.auth.signOut();
+                    }
+                    showAuth();
+                });
+            }
+            
+            // Auth state listener
+            if (window.auth) {
+                window.auth.onAuthStateChanged(function(user) {
+                    console.log('🔐 Auth state changed:', user ? 'logged in' : 'logged out');
+                    currentUser = user;
+                    
+                    if (user && user.emailVerified) {
+                        showApp();
+                    } else {
+                        showAuth();
+                    }
+                });
+            }
+            
+            // Initialize Google Maps when needed
+            function initializeMap() {
+                if (typeof google !== 'undefined' && google.maps && !map) {
+                    console.log('🗺️ Initializing Google Maps...');
+                    
+                    map = new google.maps.Map(document.getElementById('map'), {
+                        center: { lat: 39.8283, lng: -98.5795 }, // Center of US
+                        zoom: 4
+                    });
+                    
+                    geocoder = new google.maps.Geocoder();
+                    console.log('🗺️ Google Maps initialized');
+                }
+            }
+            
+            // Helper functions
+            function showEmailStep() {
+                console.log('📧 Showing email step');
+                emailStep.style.display = 'block';
+                passwordStep.style.display = 'none';
+                emailInput.value = '';
+                emailInput.focus();
+            }
+            
+            function showPasswordStep() {
+                console.log('🔑 Showing password step');
+                emailStep.style.display = 'none';
+                passwordStep.style.display = 'block';
+                passwordEmailDisplay.textContent = currentUserEmail;
+                
+                // Set hidden email field for accessibility
+                const hiddenEmailField = document.getElementById('password-email-hidden');
+                if (hiddenEmailField) {
+                    hiddenEmailField.value = currentUserEmail;
+                }
+                
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
+            
+            function hideAllAuthSteps() {
+                const steps = ['email-step', 'password-step', 'register-step', 'password-reset-step', 'email-verification-step'];
+                steps.forEach(stepId => {
+                    const step = document.getElementById(stepId);
+                    if (step) step.style.display = 'none';
+                });
+            }
+            
+            function showAuth() {
+                console.log('🔐 Showing auth container');
+                authContainer.style.display = 'block';
+                appContainer.style.display = 'none';
+                hideAllAuthSteps();
+                showEmailStep();
+            }
+            
+            function showApp() {
+                console.log('🏠 Showing app container');
+                authContainer.style.display = 'none';
+                appContainer.style.display = 'block';
+                
+                // Load Google Maps script if not already loaded
+                if (typeof google === 'undefined') {
+                    loadGoogleMaps();
+                } else {
+                    initializeMap();
+                }
+                
+                // Update user email display
+                const userEmailDisplay = document.getElementById('user-email-display');
+                if (userEmailDisplay && currentUser) {
+                    userEmailDisplay.textContent = currentUser.email;
+                }
+            }
+            
+            function loadGoogleMaps() {
+                if (window.AppConfig && window.AppConfig.googleMaps && window.AppConfig.googleMaps.apiKey) {
+                    const script = document.createElement('script');
+                    script.src = `https://maps.googleapis.com/maps/api/js?key=${window.AppConfig.googleMaps.apiKey}&libraries=places&callback=initializeMap`;
+                    script.async = true;
+                    script.defer = true;
+                    document.head.appendChild(script);
+                    
+                    // Make initializeMap global for the callback
+                    window.initializeMap = initializeMap;
+                }
+            }
+            
+            function loginUser(email, password) {
+                if (window.auth) {
+                    window.auth.signInWithEmailAndPassword(email, password)
+                        .then(function(userCredential) {
+                            console.log('✅ Login successful');
+                            showAuthStatus('Login successful!', 'success');
+                        })
+                        .catch(function(error) {
+                            console.error('❌ Login failed:', error);
+                            showAuthStatus('Login failed: ' + error.message, 'error');
+                        });
+                } else {
+                    console.log('🎭 Demo mode - login would succeed');
+                    showAuthStatus('Demo mode: Login would succeed', 'success');
+                    setTimeout(showApp, 1000);
+                }
+            }
+            
+            function isValidEmail(email) {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            }
+            
+            function showAuthStatus(message, type) {
+                const authStatus = document.getElementById('auth-status');
+                if (authStatus) {
+                    authStatus.textContent = message;
+                    authStatus.className = 'auth-status ' + type;
+                    authStatus.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        authStatus.style.display = 'none';
+                    }, 5000);
+                }
+            }
+            
+            console.log('✅ App initialized');
+        });
     </script>
 </body>
 </html>

@@ -204,23 +204,44 @@
     <!-- Scripts -->
     <script>
         // Load appropriate config based on environment
-        if (window.location.hostname.includes('github.io')) {
-            // GitHub Pages - try to load production config, fallback to regular config
-            const script = document.createElement('script');
-            script.src = 'config.production.js';
-            script.onerror = () => {
-                console.log('Production config not found, using regular config');
-                const fallbackScript = document.createElement('script');
-                fallbackScript.src = 'config.js';
-                document.head.appendChild(fallbackScript);
-            };
-            document.head.appendChild(script);
-        } else {
-            // Local development - load regular config
-            const script = document.createElement('script');
-            script.src = 'config.js';
-            document.head.appendChild(script);
+        function loadConfig() {
+            if (window.location.hostname.includes('github.io')) {
+                // GitHub Pages - try to load production config, fallback to regular config
+                console.log('🌍 Loading production config for GitHub Pages...');
+                const script = document.createElement('script');
+                script.src = 'config.production.js?' + Date.now(); // Cache busting
+                script.onload = () => {
+                    console.log('✅ Production config loaded successfully');
+                };
+                script.onerror = () => {
+                    console.log('⚠️ Production config not found, using regular config');
+                    const fallbackScript = document.createElement('script');
+                    fallbackScript.src = 'config.js?' + Date.now();
+                    fallbackScript.onload = () => {
+                        console.log('✅ Fallback config loaded');
+                    };
+                    fallbackScript.onerror = () => {
+                        console.error('❌ Failed to load any config file');
+                    };
+                    document.head.appendChild(fallbackScript);
+                };
+                document.head.appendChild(script);
+            } else {
+                // Local development - load regular config
+                console.log('🏠 Loading development config...');
+                const script = document.createElement('script');
+                script.src = 'config.js?' + Date.now();
+                script.onload = () => {
+                    console.log('✅ Development config loaded');
+                };
+                script.onerror = () => {
+                    console.error('❌ Failed to load config.js');
+                };
+                document.head.appendChild(script);
+            }
         }
+        
+        loadConfig();
     </script>
     <script src="firebase-init.js"></script>
     <script src="maps-loader.js"></script>

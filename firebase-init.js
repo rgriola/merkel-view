@@ -50,12 +50,19 @@
         
         try {
             // Initialize Firebase
+            console.log('🔥 Initializing Firebase with config:', firebaseConfig);
             firebase.initializeApp(firebaseConfig);
             
             // Initialize Firebase services
+            console.log('🔥 Creating Firebase services...');
             window.auth = firebase.auth();
             window.db = firebase.firestore();
             window.storage = firebase.storage();
+            
+            console.log('🔥 Firebase services created:');
+            console.log('- auth:', window.auth ? '✅' : '❌');
+            console.log('- db:', window.db ? '✅' : '❌');
+            console.log('- storage:', window.storage ? '✅' : '❌');
             
             // Note: Persistence is handled automatically in Firebase v9+
             // The deprecation warning is harmless and can be ignored

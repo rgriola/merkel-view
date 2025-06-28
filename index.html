@@ -306,20 +306,12 @@
             const logoutBtn = document.getElementById('logout-btn');
             const backToEmailBtn = document.getElementById('back-to-email-btn');
             
-            console.log('🔍 DOM Elements Check:');
-            console.log('- emailForm:', emailForm ? '✅' : '❌');
-            console.log('- emailInput:', emailInput ? '✅' : '❌');
-            console.log('- passwordStep:', passwordStep ? '✅' : '❌');
-            
             // Email form handler
             if (emailForm) {
-                console.log('✅ Setting up email form listener');
                 emailForm.addEventListener('submit', function(e) {
-                    console.log('📧 Email form submit event triggered');
                     e.preventDefault();
                     
                     const email = emailInput.value.trim();
-                    console.log('📧 Email value:', email);
                     
                     if (email && isValidEmail(email)) {
                         currentUserEmail = email;
@@ -337,7 +329,6 @@
                     const password = passwordInput.value.trim();
                     
                     if (password) {
-                        console.log('🔑 Attempting login...');
                         loginUser(currentUserEmail, password);
                     }
                 });
@@ -363,7 +354,6 @@
             // Auth state listener
             if (window.auth) {
                 window.auth.onAuthStateChanged(function(user) {
-                    console.log('🔐 Auth state changed:', user ? 'logged in' : 'logged out');
                     currentUser = user;
                     
                     if (user && user.emailVerified) {

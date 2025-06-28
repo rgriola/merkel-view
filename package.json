@@ -31,12 +31,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/merkel-view.git"
+    "url": "https://github.com/rgriola/merkel-view.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/merkel-view/issues"
+    "url": "https://github.com/rgriola/merkel-view/issues"
   },
-  "homepage": "https://github.com/yourusername/merkel-view#readme",
+  "homepage": "https://github.com/rgriola/merkel-view#readme",
   "engines": {
     "node": ">=14.0.0"
   }

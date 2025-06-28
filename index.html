@@ -202,7 +202,26 @@
     </div>
 
     <!-- Scripts -->
-    <script src="config.js"></script>
+    <script>
+        // Load appropriate config based on environment
+        if (window.location.hostname.includes('github.io')) {
+            // GitHub Pages - load production config if it exists
+            const script = document.createElement('script');
+            script.src = 'config.production.js';
+            script.onerror = () => {
+                // Fallback to regular config if production config doesn't exist
+                const fallbackScript = document.createElement('script');
+                fallbackScript.src = 'config.js';
+                document.head.appendChild(fallbackScript);
+            };
+            document.head.appendChild(script);
+        } else {
+            // Local development - load regular config
+            const script = document.createElement('script');
+            script.src = 'config.js';
+            document.head.appendChild(script);
+        }
+    </script>
     <script src="firebase-init.js"></script>
     <script src="maps-loader.js"></script>
     <script src="app.js"></script>

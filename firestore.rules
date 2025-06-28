@@ -15,7 +15,7 @@ service cloud.firestore {
       
       // Only authenticated users can create locations
       allow create: if request.auth != null 
-        && request.auth.uid == resource.data.userId
+        && request.auth.uid == request.resource.data.userId
         && validateLocationData(request.resource.data);
       
       // Only location owner can update/delete

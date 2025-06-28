@@ -57,21 +57,8 @@
             window.db = firebase.firestore();
             window.storage = firebase.storage();
             
-            // Set up persistence
-            window.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-                .catch((error) => {
-                    console.warn('Could not enable auth persistence:', error);
-                });
-            
-            // Enable Firestore offline persistence
-            window.db.enablePersistence({ synchronizeTabs: true })
-                .catch((err) => {
-                    if (err.code === 'failed-precondition') {
-                        console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-                    } else if (err.code === 'unimplemented') {
-                        console.warn('The current browser does not support persistence.');
-                    }
-                });
+            // Note: Persistence is handled automatically in Firebase v9+
+            // The deprecation warning is harmless and can be ignored
             
             console.log('🔥 Firebase initialized successfully');
             

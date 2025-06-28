@@ -467,11 +467,31 @@ function handlePasswordSubmit() {
         return;
     }
     
+    if (!currentUserEmail) {
+        showAuthStatus('Email not found. Please start over.', 'error');
+        showEmailStep();
+        return;
+    }
+    
     showAuthStatus('Signing in...', 'info');
     
     auth.signInWithEmailAndPassword(currentUserEmail, password)
         .then((userCredential) => {
             console.log('User logged in:', userCredential.user.email);
+            
+            // Test Firestore connectivity
+            console.log('Testing Firestore connectivity...');
+            db.collection('test').doc('connection-test').set({
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                user: userCredential.user.email,
+                test: true
+            }).then(() => {
+                console.log('✅ Firestore connection successful');
+            }).catch((error) => {
+                console.error('❌ Firestore connection failed:', error);
+                showAuthStatus('Backend connection issue. Some features may not work properly.', 'warning');
+            });
+            
             showAuthStatus('Login successful!', 'success');
         })
         .catch((error) => {
@@ -483,7 +503,7 @@ function handlePasswordSubmit() {
                 errorMessage = 'Demo Mode: Authentication is disabled. This UI flow is working correctly!';
             } else if (error.code === 'auth/user-not-found') {
                 errorMessage = 'No account found with this email. Would you like to register?';
-            } else if (error.code === 'auth/wrong-password') {
+            } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-login-credentials') {
                 errorMessage = 'Incorrect password. Try again or reset your password.';
             } else if (error.code === 'auth/invalid-email') {
                 errorMessage = 'Please enter a valid email address.';
@@ -491,6 +511,8 @@ function handlePasswordSubmit() {
                 errorMessage = 'This account has been disabled.';
             } else if (error.code === 'auth/api-key-not-valid') {
                 errorMessage = 'Firebase API key not configured. Please set up your Firebase credentials.';
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMessage = 'Too many failed login attempts. Please try again later.';
             }
             
             showAuthStatus(errorMessage, error.code === 'demo/disabled' ? 'info' : 'error');
@@ -538,8 +560,10 @@ function handleRegistrationSubmit() {
             console.log('User registered:', userCredential.user.email);
             
             // Send email verification
+            console.log('Attempting to send email verification to:', userCredential.user.email);
             return userCredential.user.sendEmailVerification()
                 .then(() => {
+                    console.log('✅ Email verification sent successfully to:', userCredential.user.email);
                     // Save user profile to Firestore with expanded fields
                     return db.collection('users').doc(userCredential.user.uid).set({
                         email: email,
@@ -554,7 +578,13 @@ function handleRegistrationSubmit() {
                     });
                 })
                 .then(() => {
-                    showAuthStatus('Account created! Please check your email to verify your account.', 'success');
+                    console.log('✅ User profile saved to Firestore');
+                    showAuthStatus('Merkel-Vision Approved. Check your email & verify account.', 'success');
+                    showEmailVerificationStep(email);
+                })
+                .catch((emailError) => {
+                    console.error('❌ Email verification failed:', emailError);
+                    showAuthStatus('Account created but email verification failed. You can try resending it.', 'warning');
                     showEmailVerificationStep(email);
                 });
         })
@@ -953,6 +983,79 @@ function performAddressSearch() {
     });
 }
 
+// Setup address autocomplete
+function setupAddressAutocomplete() {
+    console.log('Setting up address autocomplete');
+    
+    if (!addressSearch) {
+        console.warn('Address search input not found, cannot setup autocomplete');
+        return;
+    }
+    
+    // Check if Google Maps Places library is available
+    if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+        console.warn('Google Maps Places API not available, skipping autocomplete setup');
+        return;
+    }
+    
+    try {
+        // Create autocomplete instance
+        const autocomplete = new google.maps.places.Autocomplete(addressSearch, {
+            types: ['geocode'], // Restrict to addresses
+            fields: ['geometry', 'formatted_address', 'address_components']
+        });
+        
+        // Bias autocomplete to current map viewport if available
+        if (map) {
+            autocomplete.bindTo('bounds', map);
+        }
+        
+        // Listen for place selection
+        autocomplete.addListener('place_changed', function() {
+            const place = autocomplete.getPlace();
+            console.log('Autocomplete place selected:', place);
+            
+            if (!place.geometry) {
+                console.warn('No geometry available for selected place');
+                return;
+            }
+            
+            // Center map on selected place
+            if (map) {
+                if (place.geometry.viewport) {
+                    map.fitBounds(place.geometry.viewport);
+                } else {
+                    map.setCenter(place.geometry.location);
+                    map.setZoom(15);
+                }
+            }
+            
+            // Set selected location data
+            selectedLocation = {
+                lat: place.geometry.location.lat(),
+                lng: place.geometry.location.lng(),
+                address: place.formatted_address
+            };
+            
+            // Parse address components if available
+            if (place.address_components) {
+                const addressComponents = parseAddressComponents(place.address_components);
+                selectedLocation = { ...selectedLocation, ...addressComponents };
+            }
+            
+            // Add temporary marker and open location modal
+            addTemporaryMarker(place.geometry.location);
+            openLocationModal();
+        });
+        
+        console.log('Address autocomplete setup complete');
+        
+    } catch (error) {
+        console.warn('Failed to setup address autocomplete:', error);
+        console.log('Falling back to manual search only');
+    }
+}
+
 // Parse address components from Google Maps API
 function parseAddressComponents(components) {
     const parsed = {
@@ -1200,11 +1303,17 @@ function showTemporaryMessage(message, type) {
 
 // Load locations from Firestore
 function loadLocations() {
-    if (!db || !currentUser) return;
+    if (!db || !currentUser) {
+        console.log('Cannot load locations: db or currentUser not available');
+        return;
+    }
+    
+    console.log('Loading locations for user:', currentUser.email);
     
     db.collection('locations')
         .orderBy('dateAdded', 'desc')
         .onSnapshot((snapshot) => {
+            console.log('✅ Locations snapshot received, count:', snapshot.size);
             const locationList = document.getElementById('location-list');
             if (locationList) {
                 // Clear existing content
@@ -1224,159 +1333,47 @@ function loadLocations() {
                         AppState.addMarker(doc.id, marker);
                     }
                 });
-                
-                // Apply current filters
-                applyLocationFilters();
             }
         }, (error) => {
-            console.error('Error loading locations:', error);
-        });
-}
-
-// Add location to the sidebar list
-function addLocationToList(location, id) {
-    const locationList = document.getElementById('location-list');
-    if (!locationList) return;
-    
-    const categoryEmojis = {
-        restaurant: '🍽️',
-        hotel: '🏨',
-        attraction: '🎢',
-        business: '🏢',
-        landmark: '🏛️',
-        other: '📍'
-    };
-    
-    const emoji = categoryEmojis[location.category] || '📍';
-    
-    const locationElement = document.createElement('div');
-    locationElement.className = 'location-item';
-    locationElement.innerHTML = `
-        <div class="location-header">
-            <h4>${emoji} ${location.name}</h4>
-            <span class="category-badge" style="background: ${getCategoryColor(location.category)}">
-                ${location.category}
-            </span>
-        </div>
-        ${location.photoURL ? `
-            <div class="location-photo" style="margin: 10px 0;">
-                <img src="${location.photoURL}" alt="${location.name}" 
-                     style="width: 100%; max-height: 150px; object-fit: cover; border-radius: 6px; cursor: pointer;"
-                     onclick="openPhotoModal('${location.photoURL}', '${location.name}')">
-            </div>
-        ` : ''}
-        <p class="location-address">📍 ${location.address || `${location.city}, ${location.state}`}</p>
-        ${location.notes ? `<p class="location-notes">💭 ${location.notes}</p>` : ''}
-        <div class="location-meta">
-            <small>Added by: ${location.addedBy}</small>
-            <button class="view-on-map-btn" onclick="focusLocationOnMap(${location.lat}, ${location.lng})">
-                View on Map
-            </button>
-        </div>
-    `;
-    
-    // Enhanced location management
-    addEditDeleteButtons(locationElement, location, id);
-    
-    locationList.appendChild(locationElement);
-}
-
-// Enhanced location management
-function addEditDeleteButtons(locationElement, location, id) {
-    if (!currentUser || location.userId !== currentUser.uid) return;
-    
-    const metaDiv = locationElement.querySelector('.location-meta');
-    if (metaDiv) {
-        const actionsDiv = document.createElement('div');
-        actionsDiv.className = 'location-actions';
-        actionsDiv.style.cssText = 'margin-top: 8px; display: flex; gap: 5px;';
-        
-        actionsDiv.innerHTML = `
-            <button class="edit-location-btn" onclick="editLocation('${id}')" 
-                    style="background: #2196F3; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;">
-                ✏️ Edit
-            </button>
-            <button class="delete-location-btn" onclick="deleteLocation('${id}')" 
-                    style="background: #f44336; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;">
-                🗑️ Delete
-            </button>
-        `;
-        
-        metaDiv.appendChild(actionsDiv);
-    }
-}
-
-// Edit location function
-window.editLocation = function(locationId) {
-    db.collection('locations').doc(locationId).get()
-        .then((doc) => {
-            if (doc.exists) {
-                const location = doc.data();
-                
-                // Set up for editing
-                selectedLocation = {
-                    lat: location.lat,
-                    lng: location.lng,
-                    address: location.address,
-                    city: location.city,
-                    state: location.state
-                };
-                
-                // Open modal with existing data
-                openLocationModal(selectedLocation);
-                
-                // Pre-fill all form fields
-                document.getElementById('location-name').value = location.name;
-                document.getElementById('location-category').value = location.category;
-                document.getElementById('location-notes').value = location.notes || '';
-                
-                // Change form to edit mode
-                const submitBtn = document.querySelector('#location-form button[type="submit"]');
-                submitBtn.textContent = 'Update Location';
-                submitBtn.dataset.editing = locationId;
-                
-                // Update modal title
-                document.querySelector('#location-modal h2').textContent = 'Edit Location';
-            }
-        })
-        .catch((error) => {
-            console.error('Error fetching location:', error);
-            alert('Error loading location for editing');
-        });
-};
-
-// Delete location function
-window.deleteLocation = function(locationId) {
-    if (!confirm('Are you sure you want to delete this location? This action cannot be undone.')) {
-        return;
-    }
-    
-    db.collection('locations').doc(locationId).get()
-        .then((doc) => {
-            if (doc.exists) {
-                const location = doc.data();
-                
-                // Delete photo from storage if exists
-                if (location.photoFileName) {
-                    const storage = firebase.storage();
-                    storage.ref(location.photoFileName).delete()
-                        .catch((error) => console.warn('Error deleting photo:', error));
-                }
-                
-                // Delete location document
-                return db.collection('locations').doc(locationId).delete();
-            }
-        })
-        .then(() => {
-            showTemporaryMessage('Location deleted successfully', 'success');
+            console.error('❌ Error loading locations:', error);
+            console.error('Error code:', error.code);
+            console.error('Error message:', error.message);
             
-            // Remove marker from map
-            AppState.removeMarker(locationId);
-        })
-        .catch((error) => {
-            console.error('Error deleting location:', error);
-            alert('Error deleting location: ' + error.message);
+            // Show user-friendly error message
+            if (error.code === 'permission-denied') {
+                showTemporaryMessage('Permission denied. Please check Firestore security rules.', 'error');
+            } else if (error.code === 'unavailable') {
+                showTemporaryMessage('Backend temporarily unavailable. Please try again later.', 'error');
+            } else {
+                showTemporaryMessage('Cannot load locations: ' + error.message, 'error');
+            }
         });
-};
+}
 
-//# sourceMappingURL=app.js.map
+// Add temporary marker for location selection
+function addTemporaryMarker(latLng) {
+    console.log('Adding temporary marker at:', latLng);
+    
+    // Remove previous temporary marker
+    if (tempMarker) {
+        tempMarker.map = null;
+    }
+    
+    // Create custom pin element for temporary marker
+    const tempPinElement = new google.maps.marker.PinElement({
+        background: '#FF5722',
+        borderColor: '#FFFFFF',
+        glyph: '📍',
+        scale: 1.2
+    });
+    
+    // Add temporary marker using AdvancedMarkerElement
+    tempMarker = new google.maps.marker.AdvancedMarkerElement({
+        position: latLng,
+        map: map,
+        title: 'Click to add location here',
+        content: tempPinElement.element
+    });
+    
+    console.log('Temporary marker added');
+}

@@ -361,11 +361,18 @@ function showEmailStep() {
 }
 
 function showPasswordStep() {
+    console.log('🔑 showPasswordStep called');
+    console.log('🔑 passwordStep element:', passwordStep);
+    console.log('🔑 currentUserEmail:', currentUserEmail);
+    
     hideAllAuthSteps();
     if (passwordStep) {
         passwordStep.style.display = 'block';
+        console.log('✅ Password step displayed');
+        
         if (passwordEmailDisplay) {
             passwordEmailDisplay.textContent = currentUserEmail;
+            console.log('✅ Email display updated');
         }
         
         // Set hidden email field for accessibility
@@ -377,7 +384,10 @@ function showPasswordStep() {
         if (passwordInput) {
             passwordInput.focus();
             passwordInput.value = '';
+            console.log('✅ Password input focused and cleared');
         }
+    } else {
+        console.log('❌ passwordStep element not found');
     }
 }
 
@@ -440,20 +450,28 @@ function showApp() {
 
 // Authentication Flow Handlers
 function handleEmailSubmit() {
+    console.log('🔍 handleEmailSubmit called');
+    
     // Get the input value directly from DOM if emailInput isn't set
     const emailInputElement = emailInput || document.getElementById('email-input');
     const email = emailInputElement ? emailInputElement.value.trim() : '';
     
+    console.log('📧 Email input element:', emailInputElement);
+    console.log('📧 Email value:', email);
+    
     if (!email) {
+        console.log('❌ No email provided');
         showAuthStatus('Please enter your email address', 'error');
         return;
     }
     
     if (!isValidEmail(email)) {
+        console.log('❌ Invalid email format');
         showAuthStatus('Please enter a valid email address', 'error');
         return;
     }
     
+    console.log('✅ Email validation passed, setting currentUserEmail and showing password step');
     currentUserEmail = email;
     isInAuthFlow = true; // Set flag to prevent auth state interference
     showPasswordStep();

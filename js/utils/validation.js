@@ -96,6 +96,58 @@ const ValidationUtils = {
         }
         
         return { valid: true };
+    },
+    
+    /**
+     * Validate registration form data (alternative method)
+     */
+    validateRegistrationForm(userData) {
+        const { firstName, lastName, email, phone, password, confirmPassword } = userData;
+        
+        // Check all required fields
+        if (!firstName || !lastName || !email || !phone || !password || !confirmPassword) {
+            return {
+                isValid: false,
+                message: 'All fields are required'
+            };
+        }
+        
+        // Validate email format
+        if (!this.isValidEmail(email)) {
+            return {
+                isValid: false,
+                message: 'Please enter a valid email address'
+            };
+        }
+        
+        // Validate phone format
+        if (!this.isValidPhone(phone)) {
+            return {
+                isValid: false,
+                message: 'Please enter a valid phone number'
+            };
+        }
+        
+        // Validate password length
+        if (password.length < 6) {
+            return {
+                isValid: false,
+                message: 'Password must be at least 6 characters'
+            };
+        }
+        
+        // Check password confirmation
+        if (password !== confirmPassword) {
+            return {
+                isValid: false,
+                message: 'Passwords do not match'
+            };
+        }
+        
+        return {
+            isValid: true,
+            message: 'Validation passed'
+        };
     }
 };
 

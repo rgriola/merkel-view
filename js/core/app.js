@@ -6,6 +6,10 @@
 // Main application controller
 const MerkelApp = {
     
+    // Module instances
+    authManager: null,
+    authUI: null,
+    
     /**
      * Initialize the application
      */
@@ -23,6 +27,9 @@ const MerkelApp = {
         
         // Initialize DOM elements
         DOMHelpers.initializeDOMElements();
+        
+        // Initialize authentication modules
+        this.initializeAuthModules();
         
         // Set up module listeners (will be implemented in later phases)
         this.setupModuleListeners();
@@ -68,16 +75,10 @@ const MerkelApp = {
     setupModuleListeners() {
         console.log('🔧 Setting up module listeners...');
         
-        // These will be implemented in later phases:
-        // - setupAuthListeners() -> auth module
-        // - setupLocationListeners() -> location module
-        // - setupMapListeners() -> maps module
+        // Authentication is now handled by auth modules
+        // Locations and maps will be implemented in later phases
         
-        // For now, we'll call the original functions temporarily
-        if (typeof setupAuthListeners === 'function') {
-            setupAuthListeners();
-        }
-        
+        // For now, keep location listeners from original code
         if (typeof setupLocationListeners === 'function') {
             setupLocationListeners();
         }
@@ -89,14 +90,15 @@ const MerkelApp = {
      * Show authentication container
      */
     showAuth() {
-        DOMHelpers.show(AppState.elements.authContainer, 'flex');
-        DOMHelpers.hide(AppState.elements.appContainer);
-        
-        // Call auth module function (will be implemented in Phase 2)
-        if (typeof AuthUI !== 'undefined' && AuthUI.showEmailStep) {
-            AuthUI.showEmailStep();
-        } else if (typeof showEmailStep === 'function') {
-            showEmailStep(); // Fallback to original function
+        if (this.authUI) {
+            this.authUI.showAuth();
+        } else {
+            // Fallback to original method
+            DOMHelpers.show(AppState.elements.authContainer, 'flex');
+            DOMHelpers.hide(AppState.elements.appContainer);
+            if (typeof showEmailStep === 'function') {
+                showEmailStep();
+            }
         }
     },
     
@@ -104,8 +106,13 @@ const MerkelApp = {
      * Show main app container
      */
     showApp() {
-        DOMHelpers.hide(AppState.elements.authContainer);
-        DOMHelpers.show(AppState.elements.appContainer, 'block');
+        if (this.authUI) {
+            this.authUI.showApp();
+        } else {
+            // Fallback to original method
+            DOMHelpers.hide(AppState.elements.authContainer);
+            DOMHelpers.show(AppState.elements.appContainer, 'block');
+        }
         
         // Initialize map after showing app (if not already initialized)
         if (!AppState.map && typeof window.google !== 'undefined') {
@@ -116,34 +123,40 @@ const MerkelApp = {
     },
     
     /**
-     * Handle authentication state changes
+     * Handle user authentication (called by auth UI)
      */
-    onAuthStateChange(user) {
-        if (user) {
-            // User is signed in
-            AppState.setCurrentUser(user);
-            
-            // Check if email is verified
-            if (!user.emailVerified) {
-                // Will be handled by auth module in Phase 2
-                if (typeof showEmailVerificationStep === 'function') {
-                    showEmailVerificationStep(user.email);
-                }
-                return;
-            }
-            
-            this.showApp();
-            DOMHelpers.setText(AppState.elements.userEmailDisplay, user.email);
-        } else {
-            // User is signed out
-            AppState.setCurrentUser(null);
-            
-            // Only show email step if we're not in the middle of the auth flow
-            if (!AppState.isInAuthFlow) {
-                this.showAuth();
+    handleUserAuthenticated() {
+        console.log('✅ User authenticated, initializing app features...');
+        
+        // Initialize map if not already done
+        if (!AppState.map && typeof window.google !== 'undefined') {
+            if (typeof initMap === 'function') {
+                initMap();
             }
         }
-    }
+        
+        // Load locations if available
+        if (typeof loadLocations === 'function') {
+            loadLocations();
+        }
+    },
+    
+    /**
+     * Initialize authentication modules
+     */
+    initializeAuthModules() {
+        console.log('🔐 Initializing authentication modules...');
+        
+        // Initialize auth manager
+        this.authManager = new AuthManager();
+        this.authManager.initialize(AppState.auth, AppState.db);
+        
+        // Initialize auth UI
+        this.authUI = new AuthUI();
+        this.authUI.initialize(this.authManager, DOMHelpers, ValidationUtils);
+        
+        console.log('✅ Authentication modules initialized');
+    },
 };
 
 // Initialize app when DOM is loaded
@@ -153,5 +166,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Export to global scope
 window.MerkelApp = MerkelApp;
+window.AppCore = MerkelApp; // Additional reference for modules
 
 console.log('✅ Main app module loaded');

@@ -51,13 +51,13 @@
             <p class="registration-notice">All fields are required. You'll need to verify your email before accessing the app.</p>
             <form id="register-form">
                 <div class="form-row">
-                    <input type="text" id="first-name" placeholder="First Name" required autocomplete="given-name">
-                    <input type="text" id="last-name" placeholder="Last Name" required autocomplete="family-name">
+                    <input type="text" id="first-name-input" placeholder="First Name" required autocomplete="given-name">
+                    <input type="text" id="last-name-input" placeholder="Last Name" required autocomplete="family-name">
                 </div>
-                <input type="email" id="register-email" placeholder="Email" required autocomplete="email">
-                <input type="tel" id="phone" placeholder="Phone Number" required autocomplete="tel">
-                <input type="password" id="register-password" placeholder="Password (min 6 characters)" required minlength="6" autocomplete="new-password">
-                <input type="password" id="confirm-password" placeholder="Confirm Password" required minlength="6" autocomplete="new-password">
+                <input type="email" id="register-email-input" placeholder="Email" required autocomplete="email">
+                <input type="tel" id="phone-input" placeholder="Phone Number" required autocomplete="tel">
+                <input type="password" id="register-password-input" placeholder="Password (min 6 characters)" required minlength="6" autocomplete="new-password">
+                <input type="password" id="confirm-password-input" placeholder="Confirm Password" required minlength="6" autocomplete="new-password">
                 <button type="submit" id="register-submit-btn">Create Account</button>
             </form>
             <div class="auth-links">
@@ -70,7 +70,7 @@
             <h2>Reset Password</h2>
             <p>Enter your email address and we'll send you a link to reset your password.</p>
             <form id="password-reset-form">
-                <input type="email" id="reset-email" placeholder="Email" required autocomplete="email">
+                <input type="email" id="reset-email-input" placeholder="Email" required autocomplete="email">
                 <button type="submit" id="send-reset-btn">Send Reset Link</button>
             </form>
             <div class="auth-links">
@@ -268,20 +268,65 @@
         console.log('📋 Config loaded directly');
     </script>
 
+    <!-- Firebase Initialization -->
     <script>
-        // Firebase initialization
-        console.log('🔥 Initializing Firebase...');
+        let auth, db, storage;
         
-        try {
-            firebase.initializeApp(window.AppConfig.firebase);
-            window.auth = firebase.auth();
-            window.db = firebase.firestore();
-            window.storage = firebase.storage();
-            console.log('🔥 Firebase initialized successfully');
-        } catch (error) {
-            console.error('❌ Firebase initialization failed:', error);
+        function initializeFirebase() {
+            try {
+                if (!window.AppConfig.firebase) {
+                    throw new Error('Firebase config not found');
+                }
+                
+                console.log('🔥 Initializing Firebase...');
+                
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(window.AppConfig.firebase);
+                }
+                
+                auth = firebase.auth();
+                db = firebase.firestore();
+                storage = firebase.storage();
+                
+                // Make services globally available
+                window.auth = auth;
+                window.db = db;
+                window.storage = storage;
+                
+                console.log('✅ Firebase initialized successfully');
+                
+                // Dispatch ready event
+                window.dispatchEvent(new CustomEvent('firebaseReady'));
+                
+            } catch (error) {
+                console.error('❌ Firebase initialization failed:', error);
+            }
+        }
+        
+        // Initialize Firebase when ready
+        if (typeof firebase !== 'undefined') {
+            initializeFirebase();
+        } else {
+            console.log('⏳ Waiting for Firebase SDK...');
+            window.addEventListener('load', initializeFirebase);
         }
     </script>
+    
+    <!-- Load modular application files -->
+    <!-- Core utilities first -->
+    <script src="js/utils/validation.js"></script>
+    <script src="js/utils/dom-helpers.js"></script>
+    <script src="js/core/state.js"></script>
+    
+    <!-- Authentication modules -->
+    <script src="js/auth/auth-manager.js"></script>
+    <script src="js/auth/auth-ui.js"></script>
+    
+    <!-- Core application (must be loaded after dependencies) -->
+    <script src="js/core/app.js"></script>
+    
+    <!-- Legacy main app for remaining functionality (temporary) -->
+    <script src="app.js"></script>
 
     <script>
         // App logic
@@ -487,8 +532,10 @@
                 }
             }
             
-            console.log('✅ App initialized');
+            console.log('✅ Legacy embedded script - now handled by modular architecture');
         });
     </script>
+    
+    <!-- App initialization now handled by js/core/app.js and authentication by js/auth modules -->
 </body>
 </html>

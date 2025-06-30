@@ -1,4 +1,10 @@
-// Global variables
+/**
+ * Legacy App.js - Being Refactored
+ * This file is being gradually refactored into modules.
+ * New code is in /js/ directory modules.
+ */
+
+// Legacy global variables (will be moved to AppState)
 let currentUser = null;
 let map = null;
 let geocoder = null;
@@ -8,7 +14,7 @@ let auth, db, storage;
 let currentUserEmail = ''; // Store email for multi-step auth
 let isInAuthFlow = false; // Prevent auth state interference during multi-step flow
 
-// DOM elements (will be queried when needed)
+// Legacy DOM elements (now handled by DOMHelpers)
 let authContainer, appContainer;
 let emailStep, passwordStep, registerStep, passwordResetStep, emailVerificationStep;
 let emailForm, emailInput, emailContinueBtn;
@@ -20,38 +26,6 @@ let resendVerificationBtn, refreshVerificationBtn, logoutFromVerificationBtn;
 let logoutBtn, authStatus, userEmailDisplay;
 let addressSearch, searchBtn, addLocationBtn, locationModal, locationForm;
 let closeModal, cancelLocation;
-
-// Enhanced state management
-const AppState = {
-    markers: new Map(), // Track all location markers
-    filters: {
-        category: 'all',
-        searchTerm: '',
-        showOnlyMine: false
-    },
-    
-    // Clear all markers from map
-    clearMarkers() {
-        this.markers.forEach(marker => {
-            marker.map = null;
-        });
-        this.markers.clear();
-    },
-    
-    // Add marker to tracking
-    addMarker(id, marker) {
-        this.markers.set(id, marker);
-    },
-    
-    // Remove specific marker
-    removeMarker(id) {
-        const marker = this.markers.get(id);
-        if (marker) {
-            marker.map = null;
-            this.markers.delete(id);
-        }
-    }
-};
 
 // Initialize app when page loads
 document.addEventListener('DOMContentLoaded', function() {

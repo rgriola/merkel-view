@@ -147,84 +147,8 @@ function initializeDOMElements() {
     });
 }
 
-// Set up location-related event listeners
-function setupLocationListeners() {
-    console.log('Setting up location listeners...');
-    
-    // Re-query elements in case they weren't available before
-    if (!addressSearch) addressSearch = document.getElementById('address-search');
-    if (!searchBtn) searchBtn = document.getElementById('search-btn');
-    if (!addLocationBtn) addLocationBtn = document.getElementById('add-location-btn');
-    if (!locationModal) locationModal = document.getElementById('location-modal');
-    if (!locationForm) locationForm = document.getElementById('location-form');
-    if (!closeModal) closeModal = document.getElementById('close-modal');
-    if (!cancelLocation) cancelLocation = document.getElementById('cancel-location');
-    
-    console.log('Location elements found:', {
-        addressSearch: !!addressSearch,
-        searchBtn: !!searchBtn,
-        addLocationBtn: !!addLocationBtn,
-        locationModal: !!locationModal,
-        locationForm: !!locationForm
-    });
-    
-    // Address search
-    if (searchBtn) {
-        console.log('Adding click listener to search button');
-        searchBtn.addEventListener('click', performAddressSearch);
-    } else {
-        console.warn('Search button not found!');
-    }
-    
-    if (addressSearch) {
-        console.log('Adding keypress listener to address search');
-        addressSearch.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                console.log('Enter pressed in search box');
-                performAddressSearch();
-            }
-        });
-    } else {
-        console.warn('Address search input not found!');
-    }
-    
-    // Manual add location button
-    if (addLocationBtn) {
-        console.log('Adding click listener to add location button');
-        addLocationBtn.addEventListener('click', function() {
-            console.log('Add location button clicked');
-            openLocationModal();
-        });
-    } else {
-        console.warn('Add location button not found!');
-    }
-    
-    // Modal controls
-    if (closeModal) {
-        closeModal.addEventListener('click', closeLocationModal);
-    }
-    
-    if (cancelLocation) {
-        cancelLocation.addEventListener('click', closeLocationModal);
-    }
-    
-    // Location form submission
-    if (locationForm) {
-        locationForm.addEventListener('submit', saveLocation);
-    }
-    
-    // Setup photo preview
-    setupPhotoPreview();
-    
-    // Close modal when clicking outside
-    if (locationModal) {
-        locationModal.addEventListener('click', function(e) {
-            if (e.target === locationModal) {
-                closeLocationModal();
-            }
-        });
-    }
-}
+// Legacy setupLocationListeners function - now handled by LocationUI
+// This function is kept for backward compatibility but functionality moved to LocationUI module
 
 // Set up authentication event listeners
 // Set up authentication event listeners
@@ -772,198 +696,17 @@ function initMap() {
 // Legacy parseAddressComponents function - now handled by MapsManager
 // This function is kept for backward compatibility but functionality moved to MapsManager
 
-// Open location modal
-function openLocationModal(locationData = null) {
-    console.log('openLocationModal called with:', locationData);
-    
-    if (!locationModal) {
-        console.error('Location modal not found!');
-        return;
-    }
-    
-    console.log('Opening modal...');
-    
-    // Pre-fill form if location data provided
-    if (locationData) {
-        document.getElementById('location-address').value = locationData.address || '';
-        document.getElementById('location-coords').value = 
-            `${locationData.lat.toFixed(6)}, ${locationData.lng.toFixed(6)}`;
-        
-        if (locationData.city) {
-            document.getElementById('location-city').value = locationData.city;
-        }
-        if (locationData.state) {
-            document.getElementById('location-state').value = locationData.state;
-        }
-    } else {
-        // Clear form for manual entry
-        locationForm.reset();
-        document.getElementById('location-address').value = '';
-        document.getElementById('location-coords').value = '';
-    }
-    
-    locationModal.style.display = 'flex';
-    document.getElementById('location-name').focus();
-}
+// Legacy openLocationModal function - now handled by LocationUI
+// This function is kept for backward compatibility but functionality moved to LocationUI module
 
-// Close location modal
-function closeLocationModal() {
-    if (locationModal) {
-        locationModal.style.display = 'none';
-    }
-    
-    // Remove temporary marker
-    if (tempMarker) {
-        tempMarker.map = null;
-        tempMarker = null;
-    }
-    
-    // Reset selected location
-    selectedLocation = null;
-    
-    // Remove photo preview if exists
-    const preview = document.getElementById('photo-preview');
-    if (preview) {
-        preview.remove();
-    }
-    
-    // Reset form
-    if (locationForm) {
-        locationForm.reset();
-    }
-}
+// Legacy closeLocationModal function - now handled by LocationUI
+// This function is kept for backward compatibility but functionality moved to LocationUI module
 
-// Setup photo preview functionality
-function setupPhotoPreview() {
-    const photoInput = document.getElementById('location-photo');
-    if (photoInput) {
-        photoInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                // Remove existing preview
-                const existingPreview = document.getElementById('photo-preview');
-                if (existingPreview) {
-                    existingPreview.remove();
-                }
-                
-                // Create new preview
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const previewDiv = document.createElement('div');
-                    previewDiv.id = 'photo-preview';
-                    previewDiv.style.cssText = 'margin: 10px 0; text-align: center;';
-                    
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.style.cssText = 'max-width: 200px; max-height: 150px; border-radius: 6px; border: 2px solid #ddd;';
-                    
-                    const fileName = document.createElement('p');
-                    fileName.textContent = file.name;
-                    fileName.style.cssText = 'font-size: 12px; color: #666; margin: 5px 0 0 0;';
-                    
-                    previewDiv.appendChild(img);
-                    previewDiv.appendChild(fileName);
-                    
-                    // Insert preview after the photo input
-                    photoInput.parentNode.insertBefore(previewDiv, photoInput.nextSibling);
-                };
-                
-                reader.readAsDataURL(file);
-            }
-        });
-    }
-}
+// Legacy setupPhotoPreview function - now handled by LocationUI
+// This function is kept for backward compatibility but functionality moved to LocationUI module
 
-// Save location to Firestore (with photo upload)
-async function saveLocation(e) {
-    e.preventDefault();
-    
-    if (!currentUser || !selectedLocation) {
-        alert('Please select a location on the map first');
-        return;
-    }
-    
-    // Get form data
-    const locationData = {
-        name: document.getElementById('location-name').value.trim(),
-        address: document.getElementById('location-address').value,
-        lat: selectedLocation.lat,
-        lng: selectedLocation.lng,
-        state: document.getElementById('location-state').value,
-        city: document.getElementById('location-city').value.trim(),
-        category: document.getElementById('location-category').value,
-        notes: document.getElementById('location-notes').value.trim(),
-        addedBy: currentUser.email,
-        userId: currentUser.uid,
-        dateAdded: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    
-    // Validate required fields
-    if (!locationData.name || !locationData.state || !locationData.city || !locationData.category) {
-        alert('Please fill in all required fields');
-        return;
-    }
-    
-    // Get photo file if selected
-    const photoFile = document.getElementById('location-photo').files[0];
-    
-    // Show loading state
-    const submitBtn = document.querySelector('#location-form button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = 'Saving...';
-    submitBtn.disabled = true;
-    
-    try {
-        // Upload photo if selected
-        if (photoFile) {
-            console.log('Uploading photo:', photoFile.name);
-            submitBtn.textContent = 'Uploading photo...';
-            
-            // Create unique filename
-            const fileExtension = photoFile.name.split('.').pop();
-            const fileName = `locations/${currentUser.uid}/${Date.now()}_${locationData.name.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExtension}`;
-            
-            // Upload to Firebase Storage
-            const storage = firebase.storage();
-            const storageRef = storage.ref(fileName);
-            const uploadTask = await storageRef.put(photoFile);
-            
-            // Get download URL
-            const photoURL = await uploadTask.ref.getDownloadURL();
-            locationData.photoURL = photoURL;
-            locationData.photoFileName = fileName;
-            
-            console.log('Photo uploaded successfully:', photoURL);
-        }
-        
-        // Save location to Firestore
-        submitBtn.textContent = 'Saving location...';
-        const docRef = await db.collection('locations').add(locationData);
-        
-        console.log('Location saved with ID:', docRef.id);
-        
-        // Close modal and reset form
-        closeLocationModal();
-        document.getElementById('location-form').reset();
-        
-        // Show success message
-        showTemporaryMessage(
-            photoFile ? 'Location and photo saved successfully!' : 'Location saved successfully!', 
-            'success'
-        );
-        
-        // Reload locations to show the new one
-        loadLocations();
-        
-    } catch (error) {
-        console.error('Error saving location:', error);
-        alert('Error saving location: ' + error.message);
-    } finally {
-        // Reset button state
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }
-}
+// Legacy saveLocation function - now handled by LocationManager
+// This function is kept for backward compatibility but functionality moved to LocationManager module
 
 // Show temporary message
 function showTemporaryMessage(message, type) {
@@ -991,57 +734,8 @@ function showTemporaryMessage(message, type) {
     }, 3000);
 }
 
-// Load locations from Firestore
-function loadLocations() {
-    if (!db || !currentUser) {
-        console.log('Cannot load locations: db or currentUser not available');
-        return;
-    }
-    
-    console.log('Loading locations for user:', currentUser.email);
-    
-    db.collection('locations')
-        .orderBy('dateAdded', 'desc')
-        .onSnapshot((snapshot) => {
-            console.log('✅ Locations snapshot received, count:', snapshot.size);
-            const locationList = document.getElementById('location-list');
-            if (locationList) {
-                // Clear existing content
-                AppState.clearMarkers();
-                locationList.innerHTML = '';
-                
-                // Create filters if they don't exist
-                if (!document.getElementById('location-search-filter')) {
-                    createLocationFilters();
-                }
-                
-                snapshot.forEach((doc) => {
-                    const location = { ...doc.data(), id: doc.id };
-                    addLocationToList(location, doc.id);
-                    // Use the new modular system's maps manager instead of legacy function
-                    if (window.app && window.app.mapsManager) {
-                        const marker = window.app.mapsManager.addLocationToMap(location);
-                        if (marker) {
-                            AppState.addMarker(doc.id, marker);
-                        }
-                    }
-                });
-            }
-        }, (error) => {
-            console.error('❌ Error loading locations:', error);
-            console.error('Error code:', error.code);
-            console.error('Error message:', error.message);
-            
-            // Show user-friendly error message
-            if (error.code === 'permission-denied') {
-                showTemporaryMessage('Permission denied. Please check Firestore security rules.', 'error');
-            } else if (error.code === 'unavailable') {
-                showTemporaryMessage('Backend temporarily unavailable. Please try again later.', 'error');
-            } else {
-                showTemporaryMessage('Cannot load locations: ' + error.message, 'error');
-            }
-        });
-}
+// Legacy loadLocations function - now handled by LocationManager
+// This function is kept for backward compatibility but functionality moved to LocationManager module
 
 // Legacy addTemporaryMarker function - now handled by MapsManager
 // This function is kept for backward compatibility but functionality moved to MapsManager

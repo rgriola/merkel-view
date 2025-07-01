@@ -561,216 +561,156 @@ body {
 }
 
 .location-item {
-    padding: 1rem;
-    border: 1px solid #e0e0e0;
+    background: white;
     border-radius: 8px;
-    margin-bottom: 12px;
-    background: #fafafa;
-    transition: all 0.3s ease;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow 0.2s;
 }
 
 .location-item:hover {
-    background: #f0f0f0;
-    border-color: #667eea;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .location-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 8px;
+    align-items: center;
+    margin-bottom: 10px;
 }
 
-.location-item h4 {
+.location-header h4 {
     color: #333;
+    font-size: 18px;
     margin: 0;
-    font-size: 16px;
-    font-weight: 600;
 }
 
-.category-badge {
-    color: white;
-    padding: 2px 8px;
+.location-category {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 4px 8px;
     border-radius: 12px;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.location-details {
+    margin-bottom: 15px;
 }
 
 .location-address {
     color: #666;
     font-size: 14px;
-    margin: 4px 0;
-    font-weight: 400;
+    margin-bottom: 4px;
+}
+
+.location-city-state {
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 8px;
 }
 
 .location-notes {
     color: #555;
-    font-size: 13px;
-    margin: 6px 0;
+    font-size: 14px;
     font-style: italic;
-    background: rgba(102, 126, 234, 0.1);
-    padding: 6px 8px;
-    border-radius: 4px;
-    border-left: 3px solid #667eea;
+    margin-bottom: 0;
 }
 
-.location-meta {
+.location-actions {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 10px;
-    padding-top: 8px;
-    border-top: 1px solid #e0e0e0;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
-.location-meta small {
-    color: #999;
+.location-actions button {
+    padding: 6px 12px;
+    border: 1px solid;
+    border-radius: 4px;
     font-size: 12px;
-}
-
-.view-on-map-btn {
-    background: #667eea;
-    color: white;
-    border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
     cursor: pointer;
-    transition: background 0.3s ease;
+    transition: all 0.2s;
 }
 
-.view-on-map-btn:hover {
-    background: #5a67d8;
+.btn-view {
+    background: #e3f2fd;
+    color: #1976d2;
+    border-color: #1976d2;
 }
 
-/* Photo Modal Styles */
-#photo-modal {
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.9);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    backdrop-filter: blur(5px);
-}
-
-#photo-modal .modal-content {
-    position: relative;
-    max-width: 90vw;
-    max-height: 90vh;
-    animation: photoZoomIn 0.3s ease-out;
-}
-
-@keyframes photoZoomIn {
-    from {
-        transform: scale(0.8);
-        opacity: 0;
-    }
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-#photo-modal .close:hover {
-    color: #fff;
-    text-shadow: 2px 2px 8px rgba(0,0,0,1);
-    transform: scale(1.1);
-}
-
-/* Photo Preview in Form */
-#photo-preview {
-    animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Enhanced Location Item with Photos */
-.location-item .location-photo img {
-    transition: transform 0.2s ease;
-}
-
-.location-item .location-photo img:hover {
-    transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-/* File input styling */
-input[type="file"] {
-    transition: border-color 0.3s ease;
-}
-
-input[type="file"]:focus {
-    border-color: #667eea !important;
-    box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
-}
-
-/* Loading Indicator */
-#loading {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+.btn-view:hover {
+    background: #1976d2;
     color: white;
-    font-size: 18px;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .app-content {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-        padding: 1rem;
-    }
-    
-    .app-header {
-        padding: 1rem;
-        flex-direction: column;
-        gap: 10px;
-        text-align: center;
-    }
-    
-    #auth-container h1 {
-        font-size: 2rem;
-    }
-    
-    #login-form {
-        padding: 1.5rem;
-    }
-    
-    #map {
-        height: 300px !important;
-    }
+.btn-edit {
+    background: #fff3e0;
+    color: #f57c00;
+    border-color: #f57c00;
 }
 
-/* Utility Classes */
-.hidden {
-    display: none !important;
+.btn-edit:hover {
+    background: #f57c00;
+    color: white;
 }
 
-.text-center {
+.btn-delete {
+    background: #ffebee;
+    color: #d32f2f;
+    border-color: #d32f2f;
+}
+
+.btn-delete:hover {
+    background: #d32f2f;
+    color: white;
+}
+
+.location-photo {
+    width: 100%;
+    max-width: 300px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+
+.no-locations {
     text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 40px 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.mt-1 { margin-top: 0.5rem; }
-.mt-2 { margin-top: 1rem; }
-.mb-1 { margin-bottom: 0.5rem; }
-.mb-2 { margin-bottom: 1rem; }
+/* Location List Styles */
+.location-filters {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-group {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-group input,
+.filter-group select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.filter-group input {
+    flex: 1;
+    min-width: 200px;
+}

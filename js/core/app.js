@@ -35,6 +35,9 @@ const MerkelApp = {
         // Initialize maps module
         this.initializeMapsModule();
         
+        // Initialize location modules
+        this.initializeLocationModules();
+        
         // Set up module listeners (will be implemented in later phases)
         this.setupModuleListeners();
         
@@ -81,12 +84,8 @@ const MerkelApp = {
         
         // Authentication is now handled by auth modules
         // Maps functionality is now handled by maps module
+        // Location functionality is now handled by location modules
         this.setupAddressSearchListeners();
-        
-        // For now, keep location listeners from original code (will be moved to location module in Phase 4)
-        if (typeof setupLocationListeners === 'function') {
-            setupLocationListeners();
-        }
         
         console.log('✅ Module listeners setup complete');
     },
@@ -192,9 +191,16 @@ const MerkelApp = {
     handleUserAuthenticated() {
         console.log('✅ User authenticated, initializing app features...');
         
+        const currentUser = this.authManager.getCurrentUser();
+        
         // Update maps manager with current user
         if (this.mapsManager) {
-            this.mapsManager.setCurrentUser(this.authManager.getCurrentUser());
+            this.mapsManager.setCurrentUser(currentUser);
+        }
+        
+        // Update location manager with current user
+        if (this.locationManager) {
+            this.locationManager.setCurrentUser(currentUser);
         }
         
         // Initialize map if Google Maps is available and not already initialized
@@ -202,9 +208,14 @@ const MerkelApp = {
             this.mapsManager.initMap();
         }
         
-        // Load locations if available
-        if (typeof loadLocations === 'function') {
-            loadLocations();
+        // Load locations using new location modules
+        if (this.locationUI) {
+            this.locationUI.loadLocations();
+        } else {
+            // Fallback to legacy function
+            if (typeof loadLocations === 'function') {
+                loadLocations();
+            }
         }
     },
     
@@ -225,6 +236,30 @@ const MerkelApp = {
         console.log('✅ Authentication modules initialized');
     },
     
+    /**
+     * Initialize location modules
+     */
+    initializeLocationModules() {
+        console.log('📍 Initializing location modules...');
+        
+        // Initialize location manager
+        this.locationManager = new LocationManager();
+        this.locationManager.initialize({
+            db: AppState.db,
+            storage: AppState.storage,
+            auth: AppState.auth
+        }, this.mapsManager);
+        
+        // Initialize location UI
+        this.locationUI = new LocationUI();
+        this.locationUI.initialize(this.locationManager, this.mapsManager, DOMHelpers);
+        
+        // Export location UI globally for action button access
+        window.locationUI = this.locationUI;
+        
+        console.log('✅ Location modules initialized');
+    },
+
     /**
      * Initialize maps module
      */
@@ -253,9 +288,15 @@ const MerkelApp = {
     handleLocationSelected(location) {
         console.log('📍 Location selected:', location);
         
-        // Open location modal with the selected location
-        if (typeof openLocationModal === 'function') {
-            openLocationModal(location);
+        // Use the new location UI to handle location selection
+        if (this.locationUI) {
+            this.locationUI.updateFormWithMapSelection(location);
+            this.locationUI.openLocationModal(location);
+        } else {
+            // Fallback to legacy function
+            if (typeof openLocationModal === 'function') {
+                openLocationModal(location);
+            }
         }
     },
     

@@ -29,20 +29,11 @@ let closeModal, cancelLocation;
 
 // Initialize app when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 App starting...');
-    console.log('🔍 DOM loaded, checking Firebase...');
-    console.log('🔍 window.firebase:', typeof window.firebase);
-    console.log('🔍 firebase apps:', window.firebase ? window.firebase.apps : 'no firebase');
+    // Initialize the app when Firebase is ready
     
     // Wait for Firebase to be ready
     function initializeApp() {
-        console.log('🚀 initializeApp called');
-        console.log('🔍 window.auth:', window.auth ? 'present' : 'missing');
-        console.log('🔍 window.db:', window.db ? 'present' : 'missing');
-        console.log('🔍 window.storage:', window.storage ? 'present' : 'missing');
-        
         if (!window.auth || !window.db || !window.storage) {
-            console.log('⏳ Waiting for Firebase services...');
             setTimeout(initializeApp, 100);
             return;
         }
@@ -52,19 +43,10 @@ document.addEventListener('DOMContentLoaded', function() {
         db = window.db;
         storage = window.storage;
         
-        // Get DOM elements
-        console.log('🔍 Calling initializeDOMElements...');
+        // Initialize app components
         initializeDOMElements();
-        
-        // Set up authentication listeners
-        console.log('🔍 Calling setupAuthListeners...');
         setupAuthListeners();
-        
-        // Set up map and location listeners
-        console.log('🔍 Calling setupLocationListeners...');
         setupLocationListeners();
-        
-        console.log('✅ App initialized successfully');
     }
     
     // Listen for Firebase ready event
@@ -91,11 +73,6 @@ function initializeDOMElements() {
     emailForm = document.getElementById('email-form');
     emailInput = document.getElementById('email-input');
     emailContinueBtn = document.getElementById('email-continue-btn');
-    
-    console.log('🔍 DOM Elements Check:');
-    console.log('- emailForm:', emailForm ? '✅' : '❌');
-    console.log('- emailInput:', emailInput ? '✅' : '❌');
-    console.log('- emailContinueBtn:', emailContinueBtn ? '✅' : '❌');
     
     passwordForm = document.getElementById('password-form');
     passwordInput = document.getElementById('password-input');
@@ -138,13 +115,6 @@ function initializeDOMElements() {
     locationForm = document.getElementById('location-form');
     closeModal = document.getElementById('close-modal');
     cancelLocation = document.getElementById('cancel-location');
-    
-    console.log('DOM elements initialized:', {
-        addressSearch: !!addressSearch,
-        searchBtn: !!searchBtn,
-        addLocationBtn: !!addLocationBtn,
-        locationModal: !!locationModal
-    });
 }
 
 // Legacy setupLocationListeners function - now handled by LocationUI
@@ -183,14 +153,10 @@ function setupAuthListeners() {
 
     // Step 1: Email form
     if (emailForm) {
-        console.log('✅ Setting up email form listener');
         emailForm.addEventListener('submit', function(e) {
-            console.log('📧 Email form submit event triggered');
             e.preventDefault();
             handleEmailSubmit();
         });
-    } else {
-        console.log('❌ Email form not found');
     }
 
     // Step 2: Password form

@@ -67,7 +67,7 @@ class AuthUI {
         this.setupAuthStateListener();
         
         this.isInitialized = true;
-        console.log('✅ AuthUI initialized');
+        // AuthUI initialized successfully
         return this;
     }
 

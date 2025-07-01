@@ -42,3 +42,8 @@ users: {
   dateCreated: timestamp,
   dateUpdated: timestamp
 }
+
+////
+Phase 3: Modularize Google Maps functionality into js/maps/maps-manager.js
+Phase 4: Modularize location CRUD operations into js/locations/location-manager.js and js/locations/location-ui.js
+Phase 5: Final cleanup and testing

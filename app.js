@@ -752,347 +752,25 @@ function checkFirebaseConfig() {
     return true;
 }
 
-// Initialize Google Maps
+// Legacy initMap function - now handled by MapsManager
+// This function is kept for Google Maps API callback compatibility
 function initMap() {
-    // Default location (center of US)
-    const defaultLocation = { lat: 39.8283, lng: -98.5795 };
-    
-    const mapElement = document.getElementById('map');
-    if (!mapElement) {
-        console.error('Map element not found');
-        return;
-    }
-    
-    // Create map
-    map = new google.maps.Map(mapElement, {
-        zoom: 4,
-        center: defaultLocation,
-        mapTypeId: 'roadmap',
-        styles: [
-            {
-                featureType: 'administrative',
-                elementType: 'geometry',
-                stylers: [{visibility: 'off'}]
-            },
-            {
-                featureType: 'poi',
-                stylers: [{visibility: 'off'}]
-            }
-        ]
-    });
-    
-    // Initialize geocoder for address search
-    geocoder = new google.maps.Geocoder();
-    
-    // Test geocoding availability with a simple request
-    setTimeout(() => {
-        geocoder.geocode({ address: 'New York, NY' }, function(results, status) {
-            console.log('Geocoding test status:', status);
-            
-            if (status === 'REQUEST_DENIED' || status === 'ERROR') {
-                console.warn('Geocoding API not available:', status);
-                
-                // Show warning and disable search
-                const warning = document.getElementById('geocoding-warning');
-                const searchBtn = document.getElementById('search-btn');
-                const addressSearch = document.getElementById('address-search');
-                
-                if (warning) warning.style.display = 'block';
-                if (searchBtn) {
-                    searchBtn.disabled = true;
-                    searchBtn.textContent = 'Search Disabled';
-                    searchBtn.style.background = '#ccc';
-                    searchBtn.style.cursor = 'not-allowed';
-                }
-                if (addressSearch) {
-                    addressSearch.disabled = true;
-                    addressSearch.placeholder = 'Address search unavailable - Click map to add locations';
-                    addressSearch.style.background = '#f5f5f5';
-                }
-                
-                // Set geocoder to null to prevent errors
-                geocoder = null;
-            } else if (status === 'OK' || status === 'ZERO_RESULTS') {
-                console.log('Geocoding API is working properly');
-                
-                // Hide warning if it was shown
-                const warning = document.getElementById('geocoding-warning');
-                if (warning) warning.style.display = 'none';
-            }
-        });
-    }, 1000); // Wait 1 second after map initialization
-    
-    // Add click listener to map for location picking
-    map.addListener('click', function(event) {
-        handleMapClick(event.latLng);
-    });
-    
-    console.log('Google Maps initialized');
-    
-    // Setup address autocomplete
-    setupAddressAutocomplete();
-    
-    // Load existing locations if user is authenticated
-    if (currentUser) {
-        loadLocations();
-    }
+    console.log('🗺️ Legacy initMap called - delegating to new modular system');
+    // The actual map initialization is now handled by the new modular system
+    // in js/core/app.js which uses MapsManager
 }
 
-// Handle map click for location picking
-function handleMapClick(latLng) {
-    console.log('Map clicked at:', latLng.lat(), latLng.lng());
-    
-    if (!currentUser) {
-        console.warn('User not authenticated, ignoring map click');
-        return;
-    }
-    
-    console.log('Creating temporary marker...');
-    
-    // Remove previous temporary marker
-    if (tempMarker) {
-        tempMarker.map = null;
-    }
-    
-    // Create custom pin element for temporary marker
-    const tempPinElement = new google.maps.marker.PinElement({
-        background: '#FF5722',
-        borderColor: '#FFFFFF',
-        glyph: '📍',
-        scale: 1.2
-    });
-    
-    // Add temporary marker using AdvancedMarkerElement
-    tempMarker = new google.maps.marker.AdvancedMarkerElement({
-        position: latLng,
-        map: map,
-        title: 'Click to add location here',
-        content: tempPinElement.element
-    });
-    
-    // Create location data without geocoding (temporary fix)
-    selectedLocation = {
-        lat: latLng.lat(),
-        lng: latLng.lng(),
-        address: `Coordinates: ${latLng.lat().toFixed(6)}, ${latLng.lng().toFixed(6)}`
-    };
-    
-    // Try geocoding if API is available, otherwise use coordinates
-    if (geocoder) {
-        geocoder.geocode({ location: latLng }, function(results, status) {
-            if (status === 'OK' && results[0]) {
-                selectedLocation.address = results[0].formatted_address;
-                
-                // Parse address components
-                const addressComponents = parseAddressComponents(results[0].address_components);
-                selectedLocation = { ...selectedLocation, ...addressComponents };
-                
-                // Update modal if it's open
-                if (locationModal && locationModal.style.display === 'flex') {
-                    document.getElementById('location-address').value = selectedLocation.address;
-                    if (selectedLocation.city) {
-                        document.getElementById('location-city').value = selectedLocation.city;
-                    }
-                    if (selectedLocation.state) {
-                        document.getElementById('location-state').value = selectedLocation.state;
-                    }
-                }
-            } else {
-                console.warn('Geocoding failed or not available:', status);
-            }
-        });
-    }
-    
-    // Open location modal with current data
-    openLocationModal(selectedLocation);
-}
+// Legacy handleMapClick function - now handled by MapsManager
+// This function is kept for backward compatibility but functionality moved to MapsManager
 
-// Perform address search
-function performAddressSearch() {
-    console.log('performAddressSearch called');
-    
-    if (!addressSearch) {
-        console.error('Address search input not found');
-        return;
-    }
-    
-    const address = addressSearch.value.trim();
-    console.log('Search address:', address);
-    
-    if (!address) {
-        console.warn('No address entered');
-        return;
-    }
-    
-    if (!geocoder) {
-        console.error('Geocoder not available');
-        alert('Address search is not available. Please enable the Geocoding API in Google Cloud Console.');
-        return;
-    }
-    
-    // Show loading state
-    const originalText = searchBtn.textContent;
-    searchBtn.textContent = 'Searching...';
-    searchBtn.disabled = true;
-    
-    console.log('Starting geocoding request...');
-    
-    geocoder.geocode({ address: address }, function(results, status) {
-        console.log('Geocoding result:', status, results);
-        
-        if (status === 'OK' && results[0]) {
-            const location = results[0].geometry.location;
-            console.log('Location found:', location.lat(), location.lng());
-            
-            // Center map on result
-            map.setCenter(location);
-            map.setZoom(15);
-            
-            // Set selected location data
-            selectedLocation = {
-                lat: location.lat(),
-                lng: location.lng(),
-                address: results[0].formatted_address
-            };
-            
-            // Parse address components
-            const addressComponents = parseAddressComponents(results[0].address_components);
-            selectedLocation = { ...selectedLocation, ...addressComponents };
-            
-            // Add temporary marker
-            if (tempMarker) {
-                tempMarker.map = null;
-            }
-            
-            const tempPinElement = new google.maps.marker.PinElement({
-                background: '#FF5722',
-                borderColor: '#FFFFFF',
-                glyph: '📍',
-                scale: 1.2
-            });
-            
-            tempMarker = new google.maps.marker.AdvancedMarkerElement({
-                position: location,
-                map: map,
-                title: 'Click to add location here',
-                content: tempPinElement.element
-            });
-            
-            // Open the modal with the location data
-            console.log('Opening modal with searched location:', selectedLocation);
-            openLocationModal(selectedLocation);
-            
-            // Clear search box
-            addressSearch.value = '';
-        } else {
-            console.error('Geocoding failed:', status);
-            alert('Address not found. Please try a different search term or click on the map to add a location manually.');
-        }
-        
-        // Reset button state
-        searchBtn.textContent = originalText;
-        searchBtn.disabled = false;
-    });
-}
+// Legacy performAddressSearch function - now handled by MapsManager
+// This function is kept for backward compatibility but functionality moved to MapsManager
 
-// Setup address autocomplete
-function setupAddressAutocomplete() {
-    console.log('Setting up address autocomplete');
-    
-    if (!addressSearch) {
-        console.warn('Address search input not found, cannot setup autocomplete');
-        return;
-    }
-    
-    // Check if Google Maps Places library is available
-    if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
-        console.warn('Google Maps Places API not available, skipping autocomplete setup');
-        return;
-    }
-    
-    try {
-        // Create autocomplete instance
-        const autocomplete = new google.maps.places.Autocomplete(addressSearch, {
-            types: ['geocode'], // Restrict to addresses
-            fields: ['geometry', 'formatted_address', 'address_components']
-        });
-        
-        // Bias autocomplete to current map viewport if available
-        if (map) {
-            autocomplete.bindTo('bounds', map);
-        }
-        
-        // Listen for place selection
-        autocomplete.addListener('place_changed', function() {
-            const place = autocomplete.getPlace();
-            console.log('Autocomplete place selected:', place);
-            
-            if (!place.geometry) {
-                console.warn('No geometry available for selected place');
-                return;
-            }
-            
-            // Center map on selected place
-            if (map) {
-                if (place.geometry.viewport) {
-                    map.fitBounds(place.geometry.viewport);
-                } else {
-                    map.setCenter(place.geometry.location);
-                    map.setZoom(15);
-                }
-            }
-            
-            // Set selected location data
-            selectedLocation = {
-                lat: place.geometry.location.lat(),
-                lng: place.geometry.location.lng(),
-                address: place.formatted_address
-            };
-            
-            // Parse address components if available
-            if (place.address_components) {
-                const addressComponents = parseAddressComponents(place.address_components);
-                selectedLocation = { ...selectedLocation, ...addressComponents };
-            }
-            
-            // Add temporary marker and open location modal
-            addTemporaryMarker(place.geometry.location);
-            openLocationModal();
-        });
-        
-        console.log('Address autocomplete setup complete');
-        
-    } catch (error) {
-        console.warn('Failed to setup address autocomplete:', error);
-        console.log('Falling back to manual search only');
-    }
-}
+// Legacy setupAddressAutocomplete function - now handled by MapsManager
+// This function is kept for backward compatibility but functionality moved to MapsManager
 
-// Parse address components from Google Maps API
-function parseAddressComponents(components) {
-    const parsed = {
-        city: '',
-        state: '',
-        country: '',
-        postalCode: ''
-    };
-    
-    components.forEach(component => {
-        const types = component.types;
-        
-        if (types.includes('locality')) {
-            parsed.city = component.long_name;
-        } else if (types.includes('administrative_area_level_1')) {
-            parsed.state = component.short_name;
-        } else if (types.includes('country')) {
-            parsed.country = component.long_name;
-        } else if (types.includes('postal_code')) {
-            parsed.postalCode = component.long_name;
-        }
-    });
-    
-    return parsed;
-}
+// Legacy parseAddressComponents function - now handled by MapsManager
+// This function is kept for backward compatibility but functionality moved to MapsManager
 
 // Open location modal
 function openLocationModal(locationData = null) {
@@ -1340,9 +1018,12 @@ function loadLocations() {
                 snapshot.forEach((doc) => {
                     const location = { ...doc.data(), id: doc.id };
                     addLocationToList(location, doc.id);
-                    const marker = addLocationToMap(location);
-                    if (marker) {
-                        AppState.addMarker(doc.id, marker);
+                    // Use the new modular system's maps manager instead of legacy function
+                    if (window.app && window.app.mapsManager) {
+                        const marker = window.app.mapsManager.addLocationToMap(location);
+                        if (marker) {
+                            AppState.addMarker(doc.id, marker);
+                        }
                     }
                 });
             }
@@ -1362,30 +1043,5 @@ function loadLocations() {
         });
 }
 
-// Add temporary marker for location selection
-function addTemporaryMarker(latLng) {
-    console.log('Adding temporary marker at:', latLng);
-    
-    // Remove previous temporary marker
-    if (tempMarker) {
-        tempMarker.map = null;
-    }
-    
-    // Create custom pin element for temporary marker
-    const tempPinElement = new google.maps.marker.PinElement({
-        background: '#FF5722',
-        borderColor: '#FFFFFF',
-        glyph: '📍',
-        scale: 1.2
-    });
-    
-    // Add temporary marker using AdvancedMarkerElement
-    tempMarker = new google.maps.marker.AdvancedMarkerElement({
-        position: latLng,
-        map: map,
-        title: 'Click to add location here',
-        content: tempPinElement.element
-    });
-    
-    console.log('Temporary marker added');
-}
+// Legacy addTemporaryMarker function - now handled by MapsManager
+// This function is kept for backward compatibility but functionality moved to MapsManager

@@ -9,6 +9,7 @@ const MerkelApp = {
     // Module instances
     authManager: null,
     authUI: null,
+    mapsManager: null,
     
     /**
      * Initialize the application
@@ -30,6 +31,9 @@ const MerkelApp = {
         
         // Initialize authentication modules
         this.initializeAuthModules();
+        
+        // Initialize maps module
+        this.initializeMapsModule();
         
         // Set up module listeners (will be implemented in later phases)
         this.setupModuleListeners();
@@ -76,14 +80,79 @@ const MerkelApp = {
         console.log('🔧 Setting up module listeners...');
         
         // Authentication is now handled by auth modules
-        // Locations and maps will be implemented in later phases
+        // Maps functionality is now handled by maps module
+        this.setupAddressSearchListeners();
         
-        // For now, keep location listeners from original code
+        // For now, keep location listeners from original code (will be moved to location module in Phase 4)
         if (typeof setupLocationListeners === 'function') {
             setupLocationListeners();
         }
         
         console.log('✅ Module listeners setup complete');
+    },
+    
+    /**
+     * Setup address search functionality using maps module
+     */
+    setupAddressSearchListeners() {
+        const searchBtn = document.getElementById('search-btn');
+        const addressSearch = document.getElementById('address-search');
+        
+        if (searchBtn) {
+            searchBtn.addEventListener('click', () => this.handleAddressSearch());
+        }
+        
+        if (addressSearch) {
+            addressSearch.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.handleAddressSearch();
+                }
+            });
+        }
+    },
+    
+    /**
+     * Handle address search using maps module
+     */
+    async handleAddressSearch() {
+        const addressSearch = document.getElementById('address-search');
+        const searchBtn = document.getElementById('search-btn');
+        
+        if (!addressSearch || !this.mapsManager) {
+            console.error('❌ Address search not available');
+            return;
+        }
+        
+        const address = addressSearch.value.trim();
+        if (!address) {
+            console.warn('⚠️ No address entered');
+            return;
+        }
+        
+        // Show loading state
+        const originalText = searchBtn ? searchBtn.textContent : '';
+        if (searchBtn) {
+            searchBtn.textContent = 'Searching...';
+            searchBtn.disabled = true;
+        }
+        
+        try {
+            const location = await this.mapsManager.performAddressSearch(address);
+            console.log('✅ Address search successful:', location);
+            
+            // Clear search box
+            addressSearch.value = '';
+            
+        } catch (error) {
+            console.error('❌ Address search failed:', error);
+            alert(error);
+        } finally {
+            // Reset button state
+            if (searchBtn) {
+                searchBtn.textContent = originalText;
+                searchBtn.disabled = false;
+            }
+        }
     },
     
     /**
@@ -114,12 +183,7 @@ const MerkelApp = {
             DOMHelpers.show(AppState.elements.appContainer, 'block');
         }
         
-        // Initialize map after showing app (if not already initialized)
-        if (!AppState.map && typeof window.google !== 'undefined') {
-            if (typeof initMap === 'function') {
-                initMap(); // Will be moved to maps module in Phase 3
-            }
-        }
+        // Map initialization is now handled by handleUserAuthenticated when user logs in
     },
     
     /**
@@ -128,11 +192,14 @@ const MerkelApp = {
     handleUserAuthenticated() {
         console.log('✅ User authenticated, initializing app features...');
         
-        // Initialize map if not already done
-        if (!AppState.map && typeof window.google !== 'undefined') {
-            if (typeof initMap === 'function') {
-                initMap();
-            }
+        // Update maps manager with current user
+        if (this.mapsManager) {
+            this.mapsManager.setCurrentUser(this.authManager.getCurrentUser());
+        }
+        
+        // Initialize map if Google Maps is available and not already initialized
+        if (typeof window.google !== 'undefined' && this.mapsManager && !this.mapsManager.isInitialized()) {
+            this.mapsManager.initMap();
         }
         
         // Load locations if available
@@ -157,6 +224,53 @@ const MerkelApp = {
         
         console.log('✅ Authentication modules initialized');
     },
+    
+    /**
+     * Initialize maps module
+     */
+    initializeMapsModule() {
+        console.log('🗺️ Initializing maps module...');
+        
+        // Initialize maps manager
+        this.mapsManager = new MapsManager();
+        this.mapsManager.initialize(window.AppConfig);
+        
+        // Set up callbacks
+        this.mapsManager.setLocationSelectedCallback((location) => {
+            this.handleLocationSelected(location);
+        });
+        
+        this.mapsManager.setLocationClickedCallback((location, locationId) => {
+            this.handleLocationClicked(location, locationId);
+        });
+        
+        console.log('✅ Maps module initialized');
+    },
+    
+    /**
+     * Handle location selection from maps
+     */
+    handleLocationSelected(location) {
+        console.log('📍 Location selected:', location);
+        
+        // Open location modal with the selected location
+        if (typeof openLocationModal === 'function') {
+            openLocationModal(location);
+        }
+    },
+    
+    /**
+     * Handle location marker clicks
+     */
+    handleLocationClicked(location, locationId) {
+        console.log('📍 Location clicked:', location.name, locationId);
+        
+        // Could show location details, edit modal, etc.
+        // For now, just center the map on the location
+        if (this.mapsManager) {
+            this.mapsManager.centerMap(location.lat, location.lng, 15);
+        }
+    },
 };
 
 // Initialize app when DOM is loaded
@@ -167,5 +281,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // Export to global scope
 window.MerkelApp = MerkelApp;
 window.AppCore = MerkelApp; // Additional reference for modules
+window.app = MerkelApp; // Reference for legacy code compatibility
 
 console.log('✅ Main app module loaded');

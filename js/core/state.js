@@ -15,12 +15,12 @@ const AppState = {
     db: null,
     storage: null,
     
-    // Map state
+    // Map state (now managed by MapsManager, kept for backward compatibility)
     map: null,
     geocoder: null,
     tempMarker: null,
     selectedLocation: null,
-    markers: new Map(), // Track all location markers
+    markers: new Map(), // Track all location markers (legacy, use MapsManager instead)
     
     // Filter state
     filters: {

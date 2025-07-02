@@ -322,10 +322,38 @@ class MapsManager {
         // Check if Google Maps Places library is available
         if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
             console.warn('⚠️ Google Maps Places API not available, skipping autocomplete setup');
+            
+            // Add diagnostic info
+            console.error('🔍 Places API Diagnosis:');
+            console.error('- google object:', typeof google !== 'undefined' ? '✅ Available' : '❌ Missing');
+            console.error('- google.maps:', typeof google !== 'undefined' && typeof google.maps !== 'undefined' ? '✅ Available' : '❌ Missing');
+            console.error('- google.maps.places:', typeof google !== 'undefined' && typeof google.maps !== 'undefined' && 
+                typeof google.maps.places !== 'undefined' ? '✅ Available' : '❌ Missing');
+            console.error('Please enable the Places API in the Google Cloud Console');
+            
+            // Show a warning on the input
+            originalInput.setAttribute('placeholder', 'Places API unavailable - manual entry only');
+            originalInput.style.backgroundColor = '#fff3e0';
+            originalInput.style.borderColor = '#ff9800';
+            
+            // Add a simple manual geocoding capability
+            originalInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.geocodeManualAddress(originalInput.value);
+                }
+            });
+            
             return;
         }
         
         try {
+            // Check specifically for PlaceAutocompleteElement support (new Places API)
+            if (!google.maps.places.PlaceAutocompleteElement) {
+                console.warn('⚠️ New Places API (PlaceAutocompleteElement) not available, falling back to legacy');
+                throw new Error('PlaceAutocompleteElement not available - you may need to enable the new Places API');
+            }
+            
             // Use new PlaceAutocompleteElement (stable, production-ready)
             this.setupNewPlaceAutocomplete(addressSearchContainer, originalInput);
             console.log('✅ Address autocomplete setup complete with new PlaceAutocompleteElement');
@@ -802,6 +830,73 @@ class MapsManager {
                 Logger.error('MapsManager', 'Failed to load locations', error);
             });
         }
+    }
+
+    /**
+     * Geocode manually entered address (fallback when Places API unavailable)
+     */
+    geocodeManualAddress(address) {
+        if (!this.geocoder) {
+            console.warn('⚠️ Geocoder not available for manual address lookup');
+            return;
+        }
+        
+        console.log('🔍 Geocoding manual address:', address);
+        
+        // Show loading indicator
+        const addressInput = document.getElementById('address-search');
+        if (addressInput) {
+            addressInput.setAttribute('disabled', 'disabled');
+            addressInput.value = 'Searching...';
+        }
+        
+        this.geocoder.geocode({ address: address }, (results, status) => {
+            // Re-enable input
+            if (addressInput) {
+                addressInput.removeAttribute('disabled');
+                addressInput.value = address;
+            }
+            
+            if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) {
+                const location = results[0];
+                console.log('✅ Geocoded manual address:', location);
+                
+                // Create a place-like object from geocoder results
+                const place = {
+                    geometry: location.geometry,
+                    formatted_address: location.formatted_address,
+                    name: address
+                };
+                
+                // Handle like a regular place selection
+                this.handlePlaceSelection(place);
+            } else {
+                console.error('❌ Geocoding failed:', status);
+                
+                // Show error message
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'temp-message error';
+                errorMessage.textContent = `Geocoding failed: ${status}`;
+                errorMessage.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #f44336;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 6px;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    z-index: 1001;
+                    font-weight: 500;
+                `;
+                
+                document.body.appendChild(errorMessage);
+                
+                setTimeout(() => {
+                    errorMessage.remove();
+                }, 3000);
+            }
+        });
     }
 }
 

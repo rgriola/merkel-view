@@ -43,9 +43,9 @@
             return;
         }
         
-        // Create script element for Maps JavaScript API
+        // Create script element for Maps JavaScript API with Places API v2
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&loading=async&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&loading=async&libraries=places&v=beta`;
         script.async = true;
         script.defer = true;
         
@@ -55,12 +55,33 @@
             mapsLoading = false;
             console.log('🗺️ Google Maps API loaded successfully');
             console.log('✅ Places API ready for new PlaceAutocompleteElement usage');
+            
+            // Add detailed API availability check
+            setTimeout(() => {
+                console.log('🔍 Checking Google APIs availability:');
+                console.log('- Maps JavaScript API:', typeof google !== 'undefined' && typeof google.maps !== 'undefined' ? '✅ Available' : '❌ Missing');
+                console.log('- Places API:', typeof google !== 'undefined' && typeof google.maps !== 'undefined' && typeof google.maps.places !== 'undefined' ? '✅ Available' : '❌ Missing');
+                console.log('- Places AutocompletePlaces:', typeof google !== 'undefined' && typeof google.maps !== 'undefined' && 
+                    typeof google.maps.places !== 'undefined' && typeof google.maps.places.PlaceAutocompleteElement !== 'undefined' ? '✅ Available' : '❌ Missing');
+                console.log('- Geocoding API:', typeof google !== 'undefined' && typeof google.maps !== 'undefined' && 
+                    typeof google.maps.Geocoder !== 'undefined' ? '✅ Available' : '❌ Missing');
+            }, 1000);
         };
         
         // Handle loading error
         script.onerror = function() {
             mapsLoading = false;
             console.error('❌ Failed to load Google Maps API');
+            
+            // Log detailed troubleshooting info
+            console.log('📌 Maps API Troubleshooting Guide:');
+            console.log('1. Check if your API key is correct');
+            console.log('2. Ensure the following APIs are enabled in Google Cloud Console:');
+            console.log('   - Maps JavaScript API');
+            console.log('   - Places API (New)');
+            console.log('   - Geocoding API');
+            console.log('3. Verify API key restrictions (allowed referrers/domains)');
+            console.log('4. Check browser console for specific API error messages');
             
             // Show error in map container
             const mapElement = document.getElementById('map');
@@ -69,7 +90,14 @@
                     <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #ffebee; color: #c62828; text-align: center; padding: 20px; border-radius: 8px; border: 2px solid #ef5350;">
                         <div>
                             <h3>❌ Google Maps Failed to Load</h3>
-                            <p>Please check your API key and internet connection</p>
+                            <p>Please check:</p>
+                            <ul style="text-align: left; margin: 10px auto; max-width: 400px;">
+                                <li>API key configuration</li>
+                                <li>Maps JavaScript API is enabled</li>
+                                <li>Places API (New) is enabled</li>
+                                <li>API key restrictions (if any)</li>
+                                <li>Check browser console (F12) for details</li>
+                            </ul>
                             <button onclick="location.reload()" style="background: #c62828; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px;">Retry</button>
                         </div>
                     </div>

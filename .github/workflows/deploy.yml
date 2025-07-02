@@ -4,6 +4,11 @@ on:
   push:
     branches: [ modularize-app-js ]
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy'
+        required: true
+        default: 'modularize-app-js'
 
 permissions:
   contents: read

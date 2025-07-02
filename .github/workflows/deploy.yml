@@ -4,11 +4,6 @@ on:
   push:
     branches: [ refactor/modularize-app-js ]
   workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to deploy'
-        required: true
-        default: 'refactor/modularize-app-js'
 
 permissions:
   contents: read
@@ -21,15 +16,10 @@ concurrency:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.inputs.branch || github.ref }}
 
     - name: Create production config
       run: |

@@ -117,6 +117,12 @@ class LocationModal {
         // If editing, populate form
         if (locationData) {
             this.populateForm(locationData);
+        } else {
+            // Hide metadata section for new locations
+            const metadataContainer = document.getElementById('location-metadata');
+            if (metadataContainer) {
+                metadataContainer.style.display = 'none';
+            }
         }
 
         // Show modal
@@ -147,6 +153,12 @@ class LocationModal {
 
         // Clear photo preview
         this.clearPhotoPreview();
+
+        // Hide metadata section
+        const metadataContainer = document.getElementById('location-metadata');
+        if (metadataContainer) {
+            metadataContainer.style.display = 'none';
+        }
 
         // Remove temporary marker if exists
         if (this.mapsManager && this.mapsManager.clearTemporaryMarker) {
@@ -212,6 +224,9 @@ class LocationModal {
             this.locationForm.dataset.lat = locationData.lat;
             this.locationForm.dataset.lng = locationData.lng;
         }
+
+        // Show and populate metadata section when editing
+        this.populateMetadata(locationData);
 
         console.log('✅ Form populated successfully');
     }
@@ -392,6 +407,78 @@ class LocationModal {
         }
 
         console.log('📝 Updated form with map selection:', locationData);
+    }
+
+    /**
+     * Populate metadata section with user and date information
+     */
+    populateMetadata(locationData) {
+        const metadataContainer = document.getElementById('location-metadata');
+        const metadataText = document.getElementById('location-meta-text');
+        
+        if (!metadataContainer || !metadataText || !locationData) {
+            return;
+        }
+
+        // Only show metadata when editing (not when adding new)
+        if (this.editingLocationId && locationData.addedBy && locationData.dateAdded) {
+            // Format the date
+            let formattedDate = 'Unknown date';
+            try {
+                if (locationData.dateAdded && locationData.dateAdded.toDate) {
+                    // Firebase Timestamp object
+                    formattedDate = locationData.dateAdded.toDate().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                } else if (locationData.dateAdded && typeof locationData.dateAdded === 'object' && locationData.dateAdded.seconds) {
+                    // Firebase Timestamp as plain object
+                    formattedDate = new Date(locationData.dateAdded.seconds * 1000).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                } else if (locationData.dateAdded) {
+                    // Regular Date object or string
+                    formattedDate = new Date(locationData.dateAdded).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                }
+            } catch (error) {
+                console.warn('Error formatting date:', error);
+                formattedDate = 'Unknown date';
+            }
+
+            // Set the metadata text
+            metadataText.textContent = `Added by ${locationData.addedBy}, ${formattedDate}`;
+            
+            // Show the metadata container
+            metadataContainer.style.display = 'block';
+            
+            console.log('📝 Metadata populated:', {
+                user: locationData.addedBy,
+                date: formattedDate
+            });
+        } else {
+            // Hide metadata for new locations
+            metadataContainer.style.display = 'none';
+        }
+    }
+
+    /**
+     * Clear metadata section
+     */
+    clearMetadata() {
+        const metadataContainer = document.getElementById('location-metadata');
+        const metadataText = document.getElementById('location-meta-text');
+        
+        if (metadataContainer && metadataText) {
+            metadataText.textContent = '';
+            metadataContainer.style.display = 'none';
+        }
     }
 }
 

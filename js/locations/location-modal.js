@@ -10,7 +10,7 @@ class LocationModal {
         this.locationForm = null;
         this.addLocationBtn = null;
         this.closeModal = null;
-        this.cancelLocation = null;
+        // Removed cancelLocation
         
         // State
         this.isModalOpen = false;
@@ -48,7 +48,7 @@ class LocationModal {
         this.locationForm = document.getElementById('location-form');
         this.addLocationBtn = document.getElementById('add-location-btn');
         this.closeModal = document.getElementById('close-modal');
-        this.cancelLocation = document.getElementById('cancel-location');
+        // Removed cancelLocation since we removed the cancel button
     }
 
     /**
@@ -62,18 +62,14 @@ class LocationModal {
 
         // Close modal events
         if (this.closeModal) {
-            this.closeModal.addEventListener('click', () => this.closeModal());
-        }
-        
-        if (this.cancelLocation) {
-            this.cancelLocation.addEventListener('click', () => this.closeModal());
+            this.closeModal.addEventListener('click', () => this.closeModalHandler());
         }
 
         // Close modal when clicking outside
         if (this.locationModal) {
             this.locationModal.addEventListener('click', (e) => {
                 if (e.target === this.locationModal) {
-                    this.closeModal();
+                    this.closeModalHandler();
                 }
             });
         }
@@ -137,7 +133,7 @@ class LocationModal {
     /**
      * Close location modal
      */
-    closeModal() {
+    closeModalHandler() {
         if (!this.locationModal) return;
 
         this.locationModal.style.display = 'none';
@@ -153,9 +149,16 @@ class LocationModal {
         this.clearPhotoPreview();
 
         // Remove temporary marker if exists
-        if (this.mapsManager && this.mapsManager.removeTemporaryMarker) {
-            this.mapsManager.removeTemporaryMarker();
+        if (this.mapsManager && this.mapsManager.clearTemporaryMarker) {
+            this.mapsManager.clearTemporaryMarker();
         }
+    }
+
+    /**
+     * Close modal (public method for external calls)
+     */
+    closeModal() {
+        this.closeModalHandler();
     }
 
     /**
@@ -268,7 +271,7 @@ class LocationModal {
                 this.showMessage('Location added successfully!', 'success');
             }
 
-            this.closeModal();
+            this.closeModalHandler();
         } catch (error) {
             console.error('Error saving location:', error);
             this.showMessage('Failed to save location. Please try again.', 'error');

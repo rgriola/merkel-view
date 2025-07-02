@@ -278,8 +278,13 @@ class LocationList {
         const location = this.locations.find(loc => loc.id === locationId);
         if (!location || !this.mapsManager) return;
 
-        this.mapsManager.centerOnLocation(location.lat, location.lng);
-        this.mapsManager.addMarker(location.lat, location.lng, location.name);
+        // Center the map on the location
+        this.mapsManager.centerMap(location.lat, location.lng, 15);
+        
+        // Add a marker for the location if it doesn't already exist
+        this.mapsManager.addLocationMarker(location, locationId);
+        
+        console.log('🗺️ Centered map on location:', location.name);
     }
 
     /**

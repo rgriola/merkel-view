@@ -98,6 +98,18 @@ class LocationModal {
 
         this.editingLocationId = locationData ? locationData.id : null;
         
+        // Update modal title based on mode
+        const modalHeader = this.locationModal.querySelector('.modal-header h2');
+        if (modalHeader) {
+            modalHeader.textContent = locationData ? 'Edit Location' : 'Add New Location';
+        }
+
+        // Update submit button text
+        const submitButton = this.locationModal.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.textContent = locationData ? 'Update Location' : 'Save Location';
+        }
+        
         // Reset form
         if (this.locationForm) {
             this.locationForm.reset();
@@ -112,7 +124,7 @@ class LocationModal {
         }
 
         // Show modal
-        this.locationModal.style.display = 'block';
+        this.locationModal.style.display = 'flex';
         this.isModalOpen = true;
 
         // Focus first input
@@ -150,22 +162,55 @@ class LocationModal {
      * Populate form with location data
      */
     populateForm(locationData) {
-        if (!this.locationForm) return;
+        if (!this.locationForm || !locationData) return;
 
-        // Populate form fields
-        const fields = ['name', 'category', 'notes', 'address', 'city', 'state'];
-        fields.forEach(field => {
-            const input = this.locationForm.querySelector(`[name="${field}"]`);
-            if (input && locationData[field]) {
-                input.value = locationData[field];
-            }
-        });
+        console.log('📝 Populating form with location data:', locationData);
 
-        // Set coordinates
-        const latInput = this.locationForm.querySelector('[name="latitude"]');
-        const lngInput = this.locationForm.querySelector('[name="longitude"]');
-        if (latInput && locationData.lat) latInput.value = locationData.lat;
-        if (lngInput && locationData.lng) lngInput.value = locationData.lng;
+        // Populate form fields using actual IDs
+        const locationNameInput = document.getElementById('location-name');
+        const locationAddressInput = document.getElementById('location-address');
+        const locationCoordsInput = document.getElementById('location-coords');
+        const locationStateSelect = document.getElementById('location-state');
+        const locationCityInput = document.getElementById('location-city');
+        const locationCategorySelect = document.getElementById('location-category');
+        const locationNotesTextarea = document.getElementById('location-notes');
+
+        // Set form values
+        if (locationNameInput && locationData.name) {
+            locationNameInput.value = locationData.name;
+        }
+
+        if (locationAddressInput && locationData.address) {
+            locationAddressInput.value = locationData.address;
+        }
+
+        if (locationCoordsInput && locationData.lat && locationData.lng) {
+            locationCoordsInput.value = `${locationData.lat.toFixed(6)}, ${locationData.lng.toFixed(6)}`;
+        }
+
+        if (locationStateSelect && locationData.state) {
+            locationStateSelect.value = locationData.state;
+        }
+
+        if (locationCityInput && locationData.city) {
+            locationCityInput.value = locationData.city;
+        }
+
+        if (locationCategorySelect && locationData.category) {
+            locationCategorySelect.value = locationData.category;
+        }
+
+        if (locationNotesTextarea && locationData.notes) {
+            locationNotesTextarea.value = locationData.notes;
+        }
+
+        // Store coordinates for form submission
+        if (this.locationForm) {
+            this.locationForm.dataset.lat = locationData.lat;
+            this.locationForm.dataset.lng = locationData.lng;
+        }
+
+        console.log('✅ Form populated successfully');
     }
 
     /**
@@ -177,29 +222,49 @@ class LocationModal {
         if (!this.locationManager) return;
 
         try {
-            const formData = new FormData(this.locationForm);
-            const locationData = Object.fromEntries(formData.entries());
+            // Get form data using actual IDs
+            const locationName = document.getElementById('location-name').value.trim();
+            const locationAddress = document.getElementById('location-address').value.trim();
+            const locationState = document.getElementById('location-state').value;
+            const locationCity = document.getElementById('location-city').value.trim();
+            const locationCategory = document.getElementById('location-category').value;
+            const locationNotes = document.getElementById('location-notes').value.trim();
 
-            // Add coordinates
-            const latInput = this.locationForm.querySelector('[name="latitude"]');
-            const lngInput = this.locationForm.querySelector('[name="longitude"]');
-            
-            if (latInput && lngInput) {
-                locationData.lat = parseFloat(latInput.value) || 0;
-                locationData.lng = parseFloat(lngInput.value) || 0;
+            // Get coordinates from form dataset or parse from coords input
+            let lat = parseFloat(this.locationForm.dataset.lat) || 0;
+            let lng = parseFloat(this.locationForm.dataset.lng) || 0;
+
+            // If no coordinates in dataset, try to get from mapsManager selection
+            if (!lat && !lng && this.mapsManager && this.mapsManager.getSelectedLocation) {
+                const selectedLocation = this.mapsManager.getSelectedLocation();
+                if (selectedLocation) {
+                    lat = selectedLocation.lat;
+                    lng = selectedLocation.lng;
+                }
             }
 
+            const locationData = {
+                name: locationName,
+                address: locationAddress,
+                state: locationState,
+                city: locationCity,
+                category: locationCategory,
+                notes: locationNotes,
+                lat: lat,
+                lng: lng
+            };
+
             // Handle photos
-            const photoInput = this.locationForm.querySelector('#location-photos');
-            const photos = photoInput ? Array.from(photoInput.files) : [];
+            const photoInput = document.getElementById('location-photo');
+            const photo = photoInput && photoInput.files.length > 0 ? photoInput.files[0] : null;
 
             if (this.editingLocationId) {
                 // Update existing location
-                await this.locationManager.updateLocation(this.editingLocationId, locationData, photos);
+                await this.locationManager.updateLocation(this.editingLocationId, locationData, photo);
                 this.showMessage('Location updated successfully!', 'success');
             } else {
                 // Create new location
-                await this.locationManager.addLocation(locationData, photos);
+                await this.locationManager.saveLocation(locationData, photo);
                 this.showMessage('Location added successfully!', 'success');
             }
 

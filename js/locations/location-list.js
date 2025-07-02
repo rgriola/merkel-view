@@ -276,15 +276,38 @@ class LocationList {
      */
     viewLocationOnMap(locationId) {
         const location = this.locations.find(loc => loc.id === locationId);
-        if (!location || !this.mapsManager) return;
+        if (!location || !this.mapsManager) {
+            console.warn('⚠️ Cannot view location on map: missing location or mapsManager');
+            return;
+        }
+
+        console.log('🗺️ Viewing location on map:', {
+            id: locationId,
+            name: location.name,
+            lat: location.lat,
+            lng: location.lng
+        });
 
         // Center the map on the location
         this.mapsManager.centerMap(location.lat, location.lng, 15);
         
-        // Add a marker for the location if it doesn't already exist
-        this.mapsManager.addLocationMarker(location, locationId);
+        // Remove existing marker for this location to avoid duplicates
+        if (this.mapsManager.locationMarkers && this.mapsManager.locationMarkers.has(locationId)) {
+            const existingMarker = this.mapsManager.locationMarkers.get(locationId);
+            if (existingMarker.setMap) {
+                existingMarker.setMap(null);
+            }
+            this.mapsManager.locationMarkers.delete(locationId);
+            console.log('🧹 Removed existing marker for location:', location.name);
+        }
         
-        console.log('🗺️ Centered map on location:', location.name);
+        // Add a marker for the location
+        const marker = this.mapsManager.addLocationMarker(location, locationId);
+        if (marker) {
+            console.log('✅ Successfully added marker for location:', location.name);
+        } else {
+            console.error('❌ Failed to add marker for location:', location.name);
+        }
     }
 
     /**

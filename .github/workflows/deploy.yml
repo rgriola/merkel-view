@@ -2,13 +2,13 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ modularize-app-js ]
+    branches: [ refactor/modularize-app-js ]
   workflow_dispatch:
     inputs:
       branch:
         description: 'Branch to deploy'
         required: true
-        default: 'modularize-app-js'
+        default: 'refactor/modularize-app-js'
 
 permissions:
   contents: read

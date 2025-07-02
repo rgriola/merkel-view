@@ -28,7 +28,7 @@ class MapsManager {
      */
     initialize(appConfig) {
         this.appConfig = appConfig;
-        console.log('🗺️ MapsManager initialized');
+        Logger.info('MapsManager', 'Maps manager initialized');
         return this;
     }
 
@@ -36,38 +36,75 @@ class MapsManager {
      * Initialize Google Maps
      */
     initMap() {
-        console.log('🗺️ Initializing Google Maps...');
+        // Check if Google Maps API is available
+        if (typeof google === 'undefined' || !google.maps) {
+            Logger.warn('MapsManager', 'Google Maps API not yet available, retrying...');
+            // Retry after a short delay
+            setTimeout(() => this.initMap(), 500);
+            return false;
+        }
+
+        Logger.info('MapsManager', 'Initializing Google Maps');
         
         const mapElement = document.getElementById('map');
         if (!mapElement) {
-            console.error('❌ Map element not found');
+            Logger.error('MapsManager', 'Map element not found');
             return false;
         }
-        
-        // Create map with custom styling
-        this.map = new google.maps.Map(mapElement, {
-            zoom: this.defaultZoom,
-            center: this.defaultLocation,
-            mapTypeId: 'roadmap',
-            styles: this.getMapStyles()
-        });
-        
-        // Initialize geocoder
-        this.geocoder = new google.maps.Geocoder();
-        
-        // Test geocoding availability
-        this.testGeocodingAPI();
-        
-        // Add map click listener
-        this.map.addListener('click', (event) => {
-            this.handleMapClick(event.latLng);
-        });
-        
-        // Setup address autocomplete
-        this.setupAddressAutocomplete();
-        
-        console.log('✅ Google Maps initialized successfully');
-        return true;
+
+        try {
+            // Create map with custom styling
+            this.map = new google.maps.Map(mapElement, {
+                zoom: this.defaultZoom,
+                center: this.defaultLocation,
+                mapTypeId: 'roadmap',
+                styles: this.getMapStyles(),
+                gestureHandling: 'greedy',
+                zoomControl: true,
+                mapTypeControl: false,
+                scaleControl: true,
+                streetViewControl: false,
+                rotateControl: false,
+                fullscreenControl: true
+            });
+            
+            // Initialize geocoder
+            this.geocoder = new google.maps.Geocoder();
+            
+            // Test geocoding availability
+            this.testGeocodingAPI();
+            
+            // Add map click listener
+            this.map.addListener('click', (event) => {
+                this.handleMapClick(event.latLng);
+            });
+            
+            // Setup address autocomplete
+            this.setupAddressAutocomplete();
+            
+            Logger.success('MapsManager', 'Google Maps initialized successfully');
+            
+            // Load locations after map is ready
+            this.loadExistingLocations();
+            
+            return true;
+        } catch (error) {
+            Logger.error('MapsManager', 'Failed to initialize Google Maps', error);
+            
+            // Show error in map container
+            mapElement.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #ffebee; color: #c62828; text-align: center; padding: 20px; border-radius: 8px; border: 2px solid #ef5350;">
+                    <div>
+                        <h3>❌ Google Maps Error</h3>
+                        <p>Unable to load Google Maps</p>
+                        <p><small>Error: ${error.message}</small></p>
+                        <button onclick="location.reload()" style="background: #c62828; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px;">Retry</button>
+                    </div>
+                </div>
+            `;
+            
+            return false;
+        }
     }
 
     /**
@@ -272,10 +309,12 @@ class MapsManager {
      * Setup address autocomplete
      */
     setupAddressAutocomplete() {
-        console.log('🔍 Setting up address autocomplete');
+        console.log('🔍 Setting up address autocomplete with new PlaceAutocompleteElement');
         
-        const addressSearch = document.getElementById('address-search');
-        if (!addressSearch) {
+        const addressSearchContainer = document.getElementById('address-search').parentElement;
+        const originalInput = document.getElementById('address-search');
+        
+        if (!originalInput) {
             console.warn('⚠️ Address search input not found, cannot setup autocomplete');
             return;
         }
@@ -287,7 +326,146 @@ class MapsManager {
         }
         
         try {
-            // Create autocomplete instance
+            // Use new PlaceAutocompleteElement (stable, production-ready)
+            this.setupNewPlaceAutocomplete(addressSearchContainer, originalInput);
+            console.log('✅ Address autocomplete setup complete with new PlaceAutocompleteElement');
+            
+        } catch (error) {
+            console.warn('⚠️ Failed to setup new PlaceAutocompleteElement, falling back to legacy:', error);
+            this.setupLegacyAutocomplete(originalInput);
+        }
+    }
+
+    /**
+     * Setup using new PlaceAutocompleteElement (stable production API)
+     */
+    setupNewPlaceAutocomplete(container, originalInput) {
+        try {
+            // Create the new PlaceAutocompleteElement
+            const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement({
+                locationBias: this.map ? this.map.getBounds() : null,
+                componentRestrictions: { country: 'us' }, // Adjust as needed
+                types: ['geocode'] // Restrict to addresses
+            });
+            
+            // Copy styling and attributes from original input
+            placeAutocomplete.id = 'place-autocomplete-element';
+            placeAutocomplete.placeholder = originalInput.placeholder || 'Enter address...';
+            placeAutocomplete.className = originalInput.className;
+            
+            // Copy relevant styles
+            if (originalInput.style.cssText) {
+                const styles = originalInput.style;
+                placeAutocomplete.style.width = styles.width || '100%';
+                placeAutocomplete.style.padding = styles.padding;
+                placeAutocomplete.style.border = styles.border;
+                placeAutocomplete.style.borderRadius = styles.borderRadius;
+                placeAutocomplete.style.fontSize = styles.fontSize;
+            }
+            
+            // Replace the original input with the new element
+            container.replaceChild(placeAutocomplete, originalInput);
+            
+            // Listen for place selection with new event
+            placeAutocomplete.addEventListener('gmp-placeselect', async (event) => {
+                console.log('🔍 New PlaceAutocompleteElement place selected:', event);
+                
+                const place = event.place;
+                
+                if (!place) {
+                    console.warn('⚠️ No place data available from selection');
+                    return;
+                }
+                
+                // Fetch the fields we need
+                await place.fetchFields({
+                    fields: ['displayName', 'formattedAddress', 'location', 'viewport', 'addressComponents']
+                });
+                
+                this.handleNewPlaceSelection(place);
+            });
+            
+            this.autocompleteElement = placeAutocomplete;
+            console.log('✅ Using new PlaceAutocompleteElement API (stable)');
+            
+        } catch (error) {
+            console.error('❌ Failed to setup new PlaceAutocompleteElement:', error);
+            throw error; // Re-throw to trigger fallback
+        }
+    }
+
+    /**
+     * Handle place selection from new PlaceAutocompleteElement
+     */
+    handleNewPlaceSelection(place) {
+        console.log('🗺️ Handling new place selection:', place);
+        
+        // Center map on selected place
+        if (place.viewport) {
+            this.map.fitBounds(place.viewport);
+        } else if (place.location) {
+            this.map.setCenter(place.location);
+            this.map.setZoom(this.searchZoom);
+        }
+        
+        // Set selected location data (convert to our format)
+        this.selectedLocation = {
+            lat: place.location.lat(),
+            lng: place.location.lng(),
+            address: place.formattedAddress
+        };
+        
+        // Parse address components if available
+        if (place.addressComponents) {
+            const addressComponents = this.parseNewAddressComponents(place.addressComponents);
+            this.selectedLocation = { ...this.selectedLocation, ...addressComponents };
+        }
+        
+        // Add temporary marker
+        this.addTemporaryMarker(place.location);
+        
+        // Notify callback
+        if (this.onLocationSelected) {
+            this.onLocationSelected(this.selectedLocation);
+        }
+    }
+
+    /**
+     * Parse address components from new API format
+     */
+    parseNewAddressComponents(components) {
+        const parsed = {
+            city: '',
+            state: '',
+            country: '',
+            postalCode: ''
+        };
+        
+        components.forEach(component => {
+            const types = component.types;
+            
+            if (types.includes('locality')) {
+                parsed.city = component.longText;
+            } else if (types.includes('administrative_area_level_1')) {
+                parsed.state = component.shortText;
+            } else if (types.includes('country')) {
+                parsed.country = component.longText;
+            } else if (types.includes('postal_code')) {
+                parsed.postalCode = component.longText;
+            }
+        });
+        
+        return parsed;
+    }
+
+    /**
+     * Fallback: Setup using legacy Autocomplete (deprecated)
+     */
+    setupLegacyAutocomplete(addressSearch) {
+        try {
+            console.warn('⚠️ Using deprecated google.maps.places.Autocomplete as fallback');
+            
+            // Create autocomplete instance (deprecated API)
             const autocomplete = new google.maps.places.Autocomplete(addressSearch, {
                 types: ['geocode'], // Restrict to addresses
                 fields: ['geometry', 'formatted_address', 'address_components']
@@ -301,48 +479,55 @@ class MapsManager {
             // Listen for place selection
             autocomplete.addListener('place_changed', () => {
                 const place = autocomplete.getPlace();
-                console.log('🔍 Autocomplete place selected:', place);
+                console.log('🔍 Legacy autocomplete place selected:', place);
                 
                 if (!place.geometry) {
                     console.warn('⚠️ No geometry available for selected place');
                     return;
                 }
                 
-                // Center map on selected place
-                if (place.geometry.viewport) {
-                    this.map.fitBounds(place.geometry.viewport);
-                } else {
-                    this.map.setCenter(place.geometry.location);
-                    this.map.setZoom(this.searchZoom);
-                }
-                
-                // Set selected location data
-                this.selectedLocation = {
-                    lat: place.geometry.location.lat(),
-                    lng: place.geometry.location.lng(),
-                    address: place.formatted_address
-                };
-                
-                // Parse address components if available
-                if (place.address_components) {
-                    const addressComponents = this.parseAddressComponents(place.address_components);
-                    this.selectedLocation = { ...this.selectedLocation, ...addressComponents };
-                }
-                
-                // Add temporary marker
-                this.addTemporaryMarker(place.geometry.location);
-                
-                // Notify callback
-                if (this.onLocationSelected) {
-                    this.onLocationSelected(this.selectedLocation);
-                }
+                this.handleLegacyPlaceSelection(place);
             });
             
-            console.log('✅ Address autocomplete setup complete');
+            this.autocomplete = autocomplete;
+            console.log('✅ Using legacy Autocomplete API (deprecated) as fallback');
             
         } catch (error) {
-            console.warn('⚠️ Failed to setup address autocomplete:', error);
-            console.log('Falling back to manual search only');
+            console.error('❌ Failed to setup legacy autocomplete:', error);
+        }
+    }
+
+    /**
+     * Handle place selection from legacy API
+     */
+    handleLegacyPlaceSelection(place) {
+        // Center map on selected place
+        if (place.geometry.viewport) {
+            this.map.fitBounds(place.geometry.viewport);
+        } else {
+            this.map.setCenter(place.geometry.location);
+            this.map.setZoom(this.searchZoom);
+        }
+        
+        // Set selected location data
+        this.selectedLocation = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+            address: place.formatted_address
+        };
+        
+        // Parse address components if available
+        if (place.address_components) {
+            const addressComponents = this.parseAddressComponents(place.address_components);
+            this.selectedLocation = { ...this.selectedLocation, ...addressComponents };
+        }
+        
+        // Add temporary marker
+        this.addTemporaryMarker(place.geometry.location);
+        
+        // Notify callback
+        if (this.onLocationSelected) {
+            this.onLocationSelected(this.selectedLocation);
         }
     }
 
@@ -550,7 +735,55 @@ class MapsManager {
     getMap() {
         return this.map;
     }
+
+    /**
+     * Load existing locations and add them to the map
+     */
+    loadExistingLocations() {
+        if (!this.currentUser) {
+            Logger.info('MapsManager', 'No user authenticated, skipping location load');
+            return;
+        }
+
+        // Trigger location loading through the app
+        if (window.MerkelApp && window.MerkelApp.locationUI) {
+            Logger.info('MapsManager', 'Triggering location load through LocationUI');
+            window.MerkelApp.locationUI.loadLocations().catch(error => {
+                Logger.error('MapsManager', 'Failed to load locations', error);
+            });
+        }
+    }
 }
 
 // Export as global for now, will be converted to ES modules later
 window.MapsManager = MapsManager;
+
+// Global initMap function for Google Maps API callback
+window.initMap = function() {
+    Logger.info('MapsManager', 'Google Maps API callback received');
+    
+    // Verify Google Maps is actually loaded
+    if (typeof google === 'undefined' || !google.maps) {
+        Logger.error('MapsManager', 'Google Maps API callback received but API not available');
+        return;
+    }
+    
+    // Try to initialize map if MerkelApp and mapsManager are available
+    if (window.MerkelApp && window.MerkelApp.mapsManager) {
+        Logger.info('MapsManager', 'Initializing map via MerkelApp.mapsManager');
+        const success = window.MerkelApp.mapsManager.initMap();
+        if (!success) {
+            Logger.error('MapsManager', 'Failed to initialize map');
+        }
+    } else {
+        Logger.info('MapsManager', 'MerkelApp not ready, map will initialize when user authenticates');
+        // The map will be initialized when user authenticates in handleUserAuthenticated
+    }
+};
+
+// Log module loading
+if (window.Logger) {
+    Logger.info('MapsManager module loaded');
+} else {
+    console.log('✅ Maps Manager module loaded');
+}

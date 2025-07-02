@@ -281,6 +281,50 @@ class LocationModal {
             messageDiv.remove();
         }, 3000);
     }
+
+    /**
+     * Update form with map selection data
+     */
+    updateFormWithMapSelection(locationData) {
+        if (!this.isModalOpen) {
+            this.openModal();
+        }
+
+        // Update form fields with location data
+        const locationNameInput = document.getElementById('location-name');
+        const locationAddressInput = document.getElementById('location-address');
+        const locationCoordsInput = document.getElementById('location-coords');
+        const locationCityInput = document.getElementById('location-city');
+        const locationStateSelect = document.getElementById('location-state');
+
+        if (locationData.name && locationNameInput) {
+            locationNameInput.value = locationData.name;
+        }
+
+        if (locationData.address && locationAddressInput) {
+            locationAddressInput.value = locationData.address;
+        }
+
+        if (locationData.lat && locationData.lng && locationCoordsInput) {
+            locationCoordsInput.value = `${locationData.lat.toFixed(6)}, ${locationData.lng.toFixed(6)}`;
+        }
+
+        if (locationData.city && locationCityInput) {
+            locationCityInput.value = locationData.city;
+        }
+
+        if (locationData.state && locationStateSelect) {
+            locationStateSelect.value = locationData.state;
+        }
+
+        // Store coordinates for form submission
+        if (this.locationForm) {
+            this.locationForm.dataset.lat = locationData.lat;
+            this.locationForm.dataset.lng = locationData.lng;
+        }
+
+        console.log('📝 Updated form with map selection:', locationData);
+    }
 }
 
 // Export for global access

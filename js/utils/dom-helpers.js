@@ -8,10 +8,14 @@ const DOMHelpers = {
     /**
      * Get element by ID with error handling
      */
-    getElementById(id) {
+    getElementById(id, required = true) {
         const element = document.getElementById(id);
-        if (!element) {
-            console.warn(`Element with ID '${id}' not found`);
+        if (!element && required) {
+            if (window.Logger) {
+                Logger.warn('DOMHelpers', `Element with ID '${id}' not found`);
+            } else {
+                console.warn(`Element with ID '${id}' not found`);
+            }
         }
         return element;
     },
@@ -55,15 +59,15 @@ const DOMHelpers = {
         AppState.elements.passwordEmailDisplay = this.getElementById('password-email-display');
         
         AppState.elements.registerForm = this.getElementById('register-form');
-        AppState.elements.firstNameInput = this.getElementById('first-name');
-        AppState.elements.lastNameInput = this.getElementById('last-name');
-        AppState.elements.registerEmailInput = this.getElementById('register-email');
-        AppState.elements.phoneInput = this.getElementById('phone');
-        AppState.elements.registerPasswordInput = this.getElementById('register-password');
-        AppState.elements.confirmPasswordInput = this.getElementById('confirm-password');
+        AppState.elements.firstNameInput = this.getElementById('first-name-input');
+        AppState.elements.lastNameInput = this.getElementById('last-name-input');
+        AppState.elements.registerEmailInput = this.getElementById('register-email-input');
+        AppState.elements.phoneInput = this.getElementById('phone-input');
+        AppState.elements.registerPasswordInput = this.getElementById('register-password-input');
+        AppState.elements.confirmPasswordInput = this.getElementById('confirm-password-input');
         
         AppState.elements.passwordResetForm = this.getElementById('password-reset-form');
-        AppState.elements.resetEmailInput = this.getElementById('reset-email');
+        AppState.elements.resetEmailInput = this.getElementById('reset-email-input');
         
         // Navigation buttons
         AppState.elements.showRegisterBtn = this.getElementById('show-register-btn');
@@ -72,15 +76,24 @@ const DOMHelpers = {
         AppState.elements.backToPasswordBtn = this.getElementById('back-to-password-btn');
         AppState.elements.backToLoginBtn = this.getElementById('back-to-login-btn');
         
-        // Verification buttons
-        AppState.elements.resendVerificationBtn = this.getElementById('resend-verification-btn');
-        AppState.elements.refreshVerificationBtn = this.getElementById('refresh-verification-btn');
-        AppState.elements.logoutFromVerificationBtn = this.getElementById('logout-from-verification-btn');
+        // Verification buttons (optional)
+        AppState.elements.resendVerificationBtn = this.getElementById('resend-verification-btn', false);
+        AppState.elements.refreshVerificationBtn = this.getElementById('refresh-verification-btn', false);
+        AppState.elements.logoutFromVerificationBtn = this.getElementById('logout-from-verification-btn', false);
         
         // App elements
         AppState.elements.logoutBtn = this.getElementById('logout-btn');
         AppState.elements.authStatus = this.getElementById('auth-status');
         AppState.elements.userEmailDisplay = this.getElementById('user-email-display');
+
+        // Logout modal elements
+        AppState.elements.logoutModal = this.getElementById('logout-modal', false);
+        AppState.elements.logoutSuccessPage = this.getElementById('logout-success-page', false);
+        AppState.elements.closeLogoutModal = this.getElementById('close-logout-modal', false);
+        AppState.elements.cancelLogoutBtn = this.getElementById('cancel-logout', false);
+        AppState.elements.confirmLogoutBtn = this.getElementById('confirm-logout', false);
+        AppState.elements.returnToLoginBtn = this.getElementById('return-to-login', false);
+        AppState.elements.redirectCountdown = this.getElementById('redirect-countdown', false);
 
         // Map and location elements
         AppState.elements.addressSearch = this.getElementById('address-search');

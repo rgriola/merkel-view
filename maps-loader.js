@@ -43,9 +43,9 @@
             return;
         }
         
-        // Create script element
+        // Create script element for Maps JavaScript API
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&loading=async&libraries=marker,places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&loading=async&libraries=places`;
         script.async = true;
         script.defer = true;
         
@@ -54,6 +54,7 @@
             mapsLoaded = true;
             mapsLoading = false;
             console.log('🗺️ Google Maps API loaded successfully');
+            console.log('✅ Places API ready for new PlaceAutocompleteElement usage');
         };
         
         // Handle loading error
@@ -87,5 +88,4 @@
     if (document.readyState === 'complete') {
         loadGoogleMaps();
     }
-    
 })();

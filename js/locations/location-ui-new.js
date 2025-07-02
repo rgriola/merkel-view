@@ -71,15 +71,6 @@ class LocationUI {
     get isModalOpen() {
         return this.locationModal.isModalOpen;
     }
-
-    /**
-     * Update form with map selection data
-     */
-    updateFormWithMapSelection(locationData) {
-        if (this.locationModal) {
-            this.locationModal.updateFormWithMapSelection(locationData);
-        }
-    }
 }
 
 // Export for global access

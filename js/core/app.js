@@ -15,10 +15,11 @@ const MerkelApp = {
      * Initialize the application
      */
     async init() {
-        console.log('🚀 Merkel-View App starting...');
-        console.log('🔍 DOM loaded, checking Firebase...');
-        console.log('🔍 window.firebase:', typeof window.firebase);
-        console.log('🔍 firebase apps:', window.firebase ? window.firebase.apps : 'no firebase');
+        Logger.info('MerkelApp', 'Starting application...');
+        Logger.debug('MerkelApp', 'DOM loaded, checking Firebase', {
+            firebase: typeof window.firebase,
+            apps: window.firebase ? window.firebase.apps.length : 0
+        });
         
         // Wait for Firebase to be ready
         await this.waitForFirebase();
@@ -38,10 +39,10 @@ const MerkelApp = {
         // Initialize location modules
         this.initializeLocationModules();
         
-        // Set up module listeners (will be implemented in later phases)
+        // Set up module listeners
         this.setupModuleListeners();
         
-        console.log('✅ App initialized successfully');
+        Logger.success('MerkelApp', 'Application initialized successfully');
     },
     
     /**
@@ -80,14 +81,51 @@ const MerkelApp = {
      * Setup listeners for other modules (placeholder for now)
      */
     setupModuleListeners() {
-        console.log('🔧 Setting up module listeners...');
+        Logger.info('MerkelApp', 'Setting up module listeners');
         
         // Authentication is now handled by auth modules
         // Maps functionality is now handled by maps module
         // Location functionality is now handled by location modules
         this.setupAddressSearchListeners();
+        this.setupTestButtonListener();
         
-        console.log('✅ Module listeners setup complete');
+        Logger.success('MerkelApp', 'Module listeners setup complete');
+    },
+
+    /**
+     * Setup test database button listener
+     */
+    setupTestButtonListener() {
+        const testDbBtn = document.getElementById('test-db-btn');
+        
+        if (testDbBtn) {
+            testDbBtn.addEventListener('click', ErrorHandler.safeEventHandler(async () => {
+                if (!this.locationManager) {
+                    alert('Location manager not initialized');
+                    return;
+                }
+                
+                testDbBtn.textContent = 'Testing...';
+                testDbBtn.disabled = true;
+                
+                try {
+                    const result = await this.locationManager.testFirestoreConnection();
+                    if (result.success) {
+                        alert('✅ Database test successful!\n\n' + result.message);
+                        Logger.success('MerkelApp', 'Database test passed');
+                    } else {
+                        alert('❌ Database test failed!\n\n' + result.message);
+                        Logger.error('MerkelApp', 'Database test failed', result.message);
+                    }
+                } catch (error) {
+                    alert('❌ Database test error!\n\n' + error.message);
+                    Logger.error('MerkelApp', 'Database test error', error);
+                } finally {
+                    testDbBtn.textContent = 'Test DB';
+                    testDbBtn.disabled = false;
+                }
+            }, 'Database test'));
+        }
     },
     
     /**
@@ -192,6 +230,7 @@ const MerkelApp = {
         console.log('✅ User authenticated, initializing app features...');
         
         const currentUser = this.authManager.getCurrentUser();
+        console.log('🔍 Current user:', currentUser ? currentUser.email : 'null');
         
         // Update maps manager with current user
         if (this.mapsManager) {
@@ -200,17 +239,36 @@ const MerkelApp = {
         
         // Update location manager with current user
         if (this.locationManager) {
+            console.log('🔍 Setting current user in location manager...');
             this.locationManager.setCurrentUser(currentUser);
         }
         
-        // Initialize map if Google Maps is available and not already initialized
-        if (typeof window.google !== 'undefined' && this.mapsManager && !this.mapsManager.isInitialized()) {
-            this.mapsManager.initMap();
+        // Update location UI with current user
+        if (this.locationUI) {
+            console.log('🔍 Setting current user in location UI...');
+            this.locationUI.setCurrentUser(currentUser);
         }
         
-        // Load locations using new location modules
+        // Initialize map if Google Maps is available and not already initialized
+        if (this.mapsManager && !this.mapsManager.isInitialized()) {
+            if (typeof window.google !== 'undefined' && window.google.maps) {
+                Logger.info('MerkelApp', 'Initializing map after authentication');
+                this.mapsManager.initMap();
+            } else {
+                Logger.info('MerkelApp', 'Google Maps API not ready, map will initialize when loaded');
+            }
+        }
+        
+        // Load locations using new location modules (wait a bit for map to initialize)
         if (this.locationUI) {
-            this.locationUI.loadLocations();
+            Logger.info('MerkelApp', 'Loading locations via location UI...');
+            // Small delay to ensure map is ready
+            setTimeout(() => {
+                this.locationUI.loadLocations().catch(error => {
+                    Logger.error('MerkelApp', 'Failed to load locations', error);
+                    alert('Failed to load locations: ' + error.message);
+                });
+            }, 1000);
         } else {
             // Fallback to legacy function
             if (typeof loadLocations === 'function') {

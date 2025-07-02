@@ -154,4 +154,9 @@ const ValidationUtils = {
 // Export to global scope
 window.ValidationUtils = ValidationUtils;
 
-console.log('✅ Validation utilities module loaded');
+// Log module loading
+if (window.Logger) {
+    Logger.info('Validation utilities module loaded');
+} else {
+    console.log('✅ Validation utilities module loaded');
+}

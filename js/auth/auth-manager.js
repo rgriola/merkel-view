@@ -28,7 +28,7 @@ class AuthManager {
      */
     setupAuthListener() {
         if (!this.auth) {
-            console.error('Auth not initialized');
+            Logger.error('AuthManager', 'Auth not initialized');
             return;
         }
 
@@ -36,7 +36,7 @@ class AuthManager {
             this.currentUser = user;
             
             if (user) {
-                console.log('🔐 User signed in:', user.email);
+                Logger.info('AuthManager', 'User signed in', { email: user.email });
                 this.isInAuthFlow = false;
                 
                 // Check email verification
@@ -91,13 +91,31 @@ class AuthManager {
      * Sign in with email and password
      */
     async signIn(email, password) {
-        if (!this.auth) {
-            throw new Error('Auth not initialized');
-        }
+        return await ErrorHandler.wrapAsync(async () => {
+            if (!this.auth) {
+                throw new Error('Auth not initialized');
+            }
 
-        try {
-            const userCredential = await this.auth.signInWithEmailAndPassword(email, password);
-            console.log('✅ User signed in:', userCredential.user.email);
+            // Sanitize input
+            const sanitizedEmail = Sanitizer.sanitizeEmail(email);
+            const sanitizedPassword = password; // Don't sanitize passwords
+            
+            // Basic validation
+            if (!ValidationUtils.isValidEmail(sanitizedEmail)) {
+                throw new Error('Please enter a valid email address');
+            }
+            
+            if (!ValidationUtils.isValidPassword(sanitizedPassword)) {
+                throw new Error('Password must be at least 6 characters');
+            }
+
+            Logger.info('AuthManager', 'Attempting user sign in', { email: sanitizedEmail });
+
+            const userCredential = await ErrorHandler.withRetry(async () => {
+                return await this.auth.signInWithEmailAndPassword(sanitizedEmail, sanitizedPassword);
+            }, 2, 1000);
+            
+            Logger.success('AuthManager', 'User signed in', { email: userCredential.user.email });
             
             // Test Firestore connectivity
             await this.testFirestoreConnection(userCredential.user.email);
@@ -107,86 +125,89 @@ class AuthManager {
                 user: userCredential.user,
                 message: 'Login successful!'
             };
-        } catch (error) {
-            console.error('❌ Sign in error:', error);
-            return {
-                success: false,
-                error: error,
-                message: this.getAuthErrorMessage(error)
-            };
-        }
+        }, 'User sign in');
     }
 
     /**
      * Create new user account
      */
     async signUp(userData) {
-        const { firstName, lastName, email, phone, password } = userData;
-        
-        if (!this.auth || !this.db) {
-            throw new Error('Auth or DB not initialized');
-        }
+        return await ErrorHandler.wrapAsync(async () => {
+            const { firstName, lastName, email, phone, password } = userData;
+            
+            if (!this.auth || !this.db) {
+                throw new Error('Auth or DB not initialized');
+            }
 
-        try {
+            // Validate user data
+            const sanitizedData = Sanitizer.sanitizeUserData(userData);
+            const validationResult = ValidationUtils.validateRegistrationForm(sanitizedData);
+            
+            if (!validationResult.isValid) {
+                throw new Error(validationResult.message);
+            }
+
+            Logger.info('AuthManager', 'Creating new user account', { email: sanitizedData.email });
+
             // Create user account
-            const userCredential = await this.auth.createUserWithEmailAndPassword(email, password);
-            console.log('✅ User registered:', userCredential.user.email);
+            const userCredential = await ErrorHandler.withRetry(async () => {
+                return await this.auth.createUserWithEmailAndPassword(sanitizedData.email, sanitizedData.password);
+            }, 2, 1000);
+            
+            Logger.success('AuthManager', 'User registered', { email: userCredential.user.email });
 
             // Send email verification
             await userCredential.user.sendEmailVerification();
-            console.log('✅ Email verification sent');
+            Logger.info('AuthManager', 'Email verification sent');
 
             // Save user profile to Firestore
             await this.db.collection('users').doc(userCredential.user.uid).set({
-                email: email,
-                firstName: firstName,
-                lastName: lastName,
-                phone: phone,
-                fullName: `${firstName} ${lastName}`,
+                email: sanitizedData.email,
+                firstName: sanitizedData.firstName,
+                lastName: sanitizedData.lastName,
+                phone: sanitizedData.phone,
+                fullName: `${sanitizedData.firstName} ${sanitizedData.lastName}`,
                 role: 'user',
                 emailVerified: false,
                 dateCreated: window.firebase.firestore.FieldValue.serverTimestamp(),
                 dateUpdated: window.firebase.firestore.FieldValue.serverTimestamp()
             });
-            console.log('✅ User profile saved to Firestore');
+            Logger.success('AuthManager', 'User profile saved to Firestore');
 
             return {
                 success: true,
                 user: userCredential.user,
                 message: 'Merkel-Vision Approved. Check your email & verify account.'
             };
-        } catch (error) {
-            console.error('❌ Registration error:', error);
-            return {
-                success: false,
-                error: error,
-                message: this.getAuthErrorMessage(error)
-            };
-        }
+        }, 'User registration');
     }
 
     /**
      * Send password reset email
      */
     async resetPassword(email) {
-        if (!this.auth) {
-            throw new Error('Auth not initialized');
-        }
+        return await ErrorHandler.wrapAsync(async () => {
+            if (!this.auth) {
+                throw new Error('Auth not initialized');
+            }
 
-        try {
-            await this.auth.sendPasswordResetEmail(email);
+            // Sanitize and validate email
+            const sanitizedEmail = Sanitizer.sanitizeEmail(email);
+            if (!ValidationUtils.isValidEmail(sanitizedEmail)) {
+                throw new Error('Please enter a valid email address');
+            }
+
+            Logger.info('AuthManager', 'Sending password reset email', { email: sanitizedEmail });
+
+            await ErrorHandler.withRetry(async () => {
+                return await this.auth.sendPasswordResetEmail(sanitizedEmail);
+            }, 2, 1000);
+
             return {
                 success: true,
                 message: 'Password reset email sent! Check your inbox for further instructions.'
             };
-        } catch (error) {
-            console.error('❌ Password reset error:', error);
-            return {
-                success: false,
-                error: error,
-                message: this.getAuthErrorMessage(error)
-            };
-        }
+        }, 'Password reset');
     }
 
     /**
@@ -254,7 +275,7 @@ class AuthManager {
     }
 
     /**
-     * Sign out current user
+     * Sign out current user with secure session cleanup
      */
     async signOut() {
         if (!this.auth) {
@@ -262,11 +283,45 @@ class AuthManager {
         }
 
         try {
+            Logger.info('AuthManager', 'Starting secure logout process...');
+            
+            // Clear current user data
+            this.currentUser = null;
+            this.currentUserEmail = '';
+            this.isInAuthFlow = false;
+            
+            // Clear any cached auth state
+            this.authStateCallbacks.forEach(callback => {
+                try {
+                    callback({
+                        type: 'signedOut',
+                        user: null
+                    });
+                } catch (error) {
+                    Logger.error('AuthManager', 'Error in auth state callback during logout', error);
+                }
+            });
+            
+            // Sign out from Firebase
             await this.auth.signOut();
-            console.log('✅ User signed out');
-            return { success: true };
+            
+            // Clear any local storage data related to authentication
+            try {
+                localStorage.removeItem('merkel_view_user_session');
+                localStorage.removeItem('merkel_view_last_login');
+                sessionStorage.clear();
+            } catch (error) {
+                Logger.warn('AuthManager', 'Could not clear local storage', error);
+            }
+            
+            Logger.info('AuthManager', '✅ User signed out securely');
+            
+            return { 
+                success: true,
+                message: 'Successfully signed out'
+            };
         } catch (error) {
-            console.error('❌ Sign out error:', error);
+            Logger.error('AuthManager', 'Sign out error', error);
             return {
                 success: false,
                 error: error,
@@ -279,17 +334,22 @@ class AuthManager {
      * Test Firestore connectivity
      */
     async testFirestoreConnection(userEmail) {
-        if (!this.db) return;
+        if (!this.db || !this.currentUser) return;
 
         try {
-            await this.db.collection('test').doc('connection-test').set({
-                timestamp: window.firebase.firestore.FieldValue.serverTimestamp(),
-                user: userEmail,
-                test: true
-            });
-            console.log('✅ Firestore connection successful');
+            // Test read permission first
+            await this.db.collection('locations').limit(1).get();
+            Logger.info('AuthManager', 'Firestore read test successful');
+            
+            // Test write permission with a user document
+            await this.db.collection('users').doc(this.currentUser.uid).set({
+                email: userEmail,
+                lastConnectionTest: window.firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            
+            Logger.success('AuthManager', 'Firestore connection successful');
         } catch (error) {
-            console.error('❌ Firestore connection failed:', error);
+            Logger.error('AuthManager', 'Firestore connection failed', error);
             throw new Error('Backend connection issue. Some features may not work properly.');
         }
     }
@@ -361,3 +421,10 @@ class AuthManager {
 
 // Export as global for now, will be converted to ES modules later
 window.AuthManager = AuthManager;
+
+// Log module loading
+if (window.Logger) {
+    Logger.info('AuthManager module loaded');
+} else {
+    console.log('✅ Auth Manager module loaded');
+}

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Merkel View - Location Intelligence</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="public/favicon.png" type="image/png">
     
     <!-- Firebase v9 CDN (Compat version for easier setup) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -93,53 +94,6 @@
         </div>
         
         <div id="auth-status"></div>
-    </div>
-
-    <!-- App Container -->
-    <div id="app-container" style="display: none;">
-        <div class="app-header">
-            <h1>Merkel View</h1>
-            <div class="user-info">
-                <span>Welcome, <span id="user-email-display"></span></span>
-                <button id="logout-btn">Logout</button>
-            </div>
-        </div>
-        
-        <div class="map-controls">
-            <input type="text" id="address-search" placeholder="Search for an address...">
-            <button id="search-btn">Search</button>
-            <button id="add-location-btn">Add Location</button>
-        </div>
-        
-        <div id="map" style="height: 500px; width: 100%;"></div>
-        
-        <div id="locations-list">
-            <h3>Your Locations</h3>
-            <div id="locations-container"></div>
-        </div>
-    </div>
-
-    <!-- Location Modal -->
-    <div id="location-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close" id="close-modal">&times;</span>
-            <h2>Add New Location</h2>
-            <form id="location-form">
-                <input type="text" id="location-name" placeholder="Location Name" required>
-                <textarea id="location-description" placeholder="Description"></textarea>
-                <select id="location-category">
-                    <option value="business">Business</option>
-                    <option value="restaurant">Restaurant</option>
-                    <option value="landmark">Landmark</option>
-                    <option value="other">Other</option>
-                </select>
-                <input type="file" id="location-photo" accept="image/*">
-                <div class="modal-buttons">
-                    <button type="submit">Save Location</button>
-                    <button type="button" id="cancel-location">Cancel</button>
-                </div>
-            </form>
-        </div>
     </div>
 
     <!-- Main App Section (hidden until authenticated) -->
@@ -248,6 +202,43 @@
         </div>
     </div>
 
+    <!-- Logout Confirmation Modal -->
+    <div id="logout-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Confirm Logout</h2>
+                <span class="close" id="close-logout-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="logout-content">
+                    <div class="logout-icon">👋</div>
+                    <p>Are you sure you want to sign out?</p>
+                    <p class="logout-detail">You'll need to sign in again to access your locations.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" id="cancel-logout">Cancel</button>
+                <button type="button" class="btn-primary" id="confirm-logout">Sign Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Success Page -->
+    <div id="logout-success-page" style="display: none;">
+        <div class="logout-success-container">
+            <div class="logout-success-content">
+                <div class="logout-success-icon">✅</div>
+                <h2>Successfully Signed Out</h2>
+                <p>You have been safely signed out of Merkel View.</p>
+                <p class="logout-detail">Your session has been securely terminated.</p>
+                <div class="logout-actions">
+                    <button type="button" class="btn-primary" id="return-to-login">Return to Sign In</button>
+                    <p class="logout-redirect-text">Redirecting to sign in page in <span id="redirect-countdown">5</span> seconds...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script>
         // Load development config directly
@@ -313,10 +304,19 @@
     </script>
     
     <!-- Load modular application files -->
+    <!-- Configuration and Firebase initialization -->
+    <script src="config.js"></script>
+    
     <!-- Core utilities first -->
+    <script src="js/utils/logger.js"></script>
+    <script src="js/utils/error-handler.js"></script>
+    <script src="js/utils/sanitizer.js"></script>
     <script src="js/utils/validation.js"></script>
     <script src="js/utils/dom-helpers.js"></script>
     <script src="js/core/state.js"></script>
+    
+    <!-- Maps loader (loads Google Maps API dynamically) -->
+    <script src="maps-loader.js"></script>
     
     <!-- Authentication modules -->
     <script src="js/auth/auth-manager.js"></script>
@@ -335,213 +335,16 @@
     <script src="js/core/app.js"></script>
     
     <!-- Legacy main app for remaining functionality (temporary) -->
-    <script src="app.js"></script>
+    <!-- <script src="app.js"></script> -->
 
     <script>
-        // App logic
-        let currentUserEmail = '';
-        let currentUser = null;
-        let map = null;
-        let geocoder = null;
-        
+        // Initialize the modular app when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 App starting...');
-            
-            // Get DOM elements
-            const emailForm = document.getElementById('email-form');
-            const emailInput = document.getElementById('email-input');
-            const emailStep = document.getElementById('email-step');
-            const passwordStep = document.getElementById('password-step');
-            const passwordForm = document.getElementById('password-form');
-            const passwordInput = document.getElementById('password-input');
-            const passwordEmailDisplay = document.getElementById('password-email-display');
-            const authContainer = document.getElementById('auth-container');
-            const appContainer = document.getElementById('app-container');
-            const logoutBtn = document.getElementById('logout-btn');
-            const backToEmailBtn = document.getElementById('back-to-email-btn');
-            
-            // Email form handler
-            if (emailForm) {
-                emailForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    const email = emailInput.value.trim();
-                    
-                    if (email && isValidEmail(email)) {
-                        currentUserEmail = email;
-                        showPasswordStep();
-                    } else {
-                        showAuthStatus('Please enter a valid email address', 'error');
-                    }
-                });
+            if (window.MerkelApp) {
+                window.MerkelApp.init();
+            } else {
+                console.error('MerkelApp not loaded');
             }
-            
-            // Password form handler
-            if (passwordForm) {
-                passwordForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    const password = passwordInput.value.trim();
-                    
-                    if (password) {
-                        loginUser(currentUserEmail, password);
-                    }
-                });
-            }
-            
-            // Back to email handler
-            if (backToEmailBtn) {
-                backToEmailBtn.addEventListener('click', function() {
-                    showEmailStep();
-                });
-            }
-            
-            // Logout handler
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', function() {
-                    if (window.auth) {
-                        window.auth.signOut();
-                    }
-                    showAuth();
-                });
-            }
-            
-            // Auth state listener
-            if (window.auth) {
-                window.auth.onAuthStateChanged(function(user) {
-                    currentUser = user;
-                    
-                    if (user && user.emailVerified) {
-                        showApp();
-                    } else {
-                        showAuth();
-                    }
-                });
-            }
-            
-            // Initialize Google Maps when needed
-            function initializeMap() {
-                if (typeof google !== 'undefined' && google.maps && !map) {
-                    console.log('🗺️ Initializing Google Maps...');
-                    
-                    map = new google.maps.Map(document.getElementById('map'), {
-                        center: { lat: 39.8283, lng: -98.5795 }, // Center of US
-                        zoom: 4
-                    });
-                    
-                    geocoder = new google.maps.Geocoder();
-                    console.log('🗺️ Google Maps initialized');
-                }
-            }
-            
-            // Helper functions
-            function showEmailStep() {
-                console.log('📧 Showing email step');
-                emailStep.style.display = 'block';
-                passwordStep.style.display = 'none';
-                emailInput.value = '';
-                emailInput.focus();
-            }
-            
-            function showPasswordStep() {
-                console.log('🔑 Showing password step');
-                emailStep.style.display = 'none';
-                passwordStep.style.display = 'block';
-                passwordEmailDisplay.textContent = currentUserEmail;
-                
-                // Set hidden email field for accessibility
-                const hiddenEmailField = document.getElementById('password-email-hidden');
-                if (hiddenEmailField) {
-                    hiddenEmailField.value = currentUserEmail;
-                }
-                
-                passwordInput.value = '';
-                passwordInput.focus();
-            }
-            
-            function hideAllAuthSteps() {
-                const steps = ['email-step', 'password-step', 'register-step', 'password-reset-step', 'email-verification-step'];
-                steps.forEach(stepId => {
-                    const step = document.getElementById(stepId);
-                    if (step) step.style.display = 'none';
-                });
-            }
-            
-            function showAuth() {
-                console.log('🔐 Showing auth container');
-                authContainer.style.display = 'block';
-                appContainer.style.display = 'none';
-                hideAllAuthSteps();
-                showEmailStep();
-            }
-            
-            function showApp() {
-                console.log('🏠 Showing app container');
-                authContainer.style.display = 'none';
-                appContainer.style.display = 'block';
-                
-                // Load Google Maps script if not already loaded
-                if (typeof google === 'undefined') {
-                    loadGoogleMaps();
-                } else {
-                    initializeMap();
-                }
-                
-                // Update user email display
-                const userEmailDisplay = document.getElementById('user-email-display');
-                if (userEmailDisplay && currentUser) {
-                    userEmailDisplay.textContent = currentUser.email;
-                }
-            }
-            
-            function loadGoogleMaps() {
-                if (window.AppConfig && window.AppConfig.googleMaps && window.AppConfig.googleMaps.apiKey) {
-                    const script = document.createElement('script');
-                    script.src = `https://maps.googleapis.com/maps/api/js?key=${window.AppConfig.googleMaps.apiKey}&libraries=places&callback=initializeMap`;
-                    script.async = true;
-                    script.defer = true;
-                    document.head.appendChild(script);
-                    
-                    // Make initializeMap global for the callback
-                    window.initializeMap = initializeMap;
-                }
-            }
-            
-            function loginUser(email, password) {
-                if (window.auth) {
-                    window.auth.signInWithEmailAndPassword(email, password)
-                        .then(function(userCredential) {
-                            console.log('✅ Login successful');
-                            showAuthStatus('Login successful!', 'success');
-                        })
-                        .catch(function(error) {
-                            console.error('❌ Login failed:', error);
-                            showAuthStatus('Login failed: ' + error.message, 'error');
-                        });
-                } else {
-                    console.log('🎭 Demo mode - login would succeed');
-                    showAuthStatus('Demo mode: Login would succeed', 'success');
-                    setTimeout(showApp, 1000);
-                }
-            }
-            
-            function isValidEmail(email) {
-                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-            }
-            
-            function showAuthStatus(message, type) {
-                const authStatus = document.getElementById('auth-status');
-                if (authStatus) {
-                    authStatus.textContent = message;
-                    authStatus.className = 'auth-status ' + type;
-                    authStatus.style.display = 'block';
-                    
-                    setTimeout(() => {
-                        authStatus.style.display = 'none';
-                    }, 5000);
-                }
-            }
-            
-            console.log('✅ Legacy embedded script - now handled by modular architecture');
         });
     </script>
     

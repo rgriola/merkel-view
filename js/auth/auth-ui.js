@@ -197,10 +197,13 @@ class AuthUI {
             this.logoutFromVerificationBtn.addEventListener('click', () => this.signOut());
         }
 
-        // Main app logout button
+        // Main app logout button - show confirmation modal
         if (this.logoutBtn) {
-            this.logoutBtn.addEventListener('click', () => this.signOut());
+            this.logoutBtn.addEventListener('click', () => this.showLogoutModal());
         }
+
+        // Setup logout modal functionality
+        this.setupLogoutModal();
     }
 
     /**
@@ -498,10 +501,199 @@ class AuthUI {
     }
 
     /**
-     * Sign out current user
+     * Setup logout modal functionality
+     */
+    setupLogoutModal() {
+        // Get logout modal elements
+        this.logoutModal = document.getElementById('logout-modal');
+        this.logoutSuccessPage = document.getElementById('logout-success-page');
+        this.closeLogoutModal = document.getElementById('close-logout-modal');
+        this.cancelLogoutBtn = document.getElementById('cancel-logout');
+        this.confirmLogoutBtn = document.getElementById('confirm-logout');
+        this.returnToLoginBtn = document.getElementById('return-to-login');
+        this.redirectCountdown = document.getElementById('redirect-countdown');
+
+        // Close modal events
+        if (this.closeLogoutModal) {
+            this.closeLogoutModal.addEventListener('click', () => this.hideLogoutModal());
+        }
+
+        if (this.cancelLogoutBtn) {
+            this.cancelLogoutBtn.addEventListener('click', () => this.hideLogoutModal());
+        }
+
+        // Confirm logout
+        if (this.confirmLogoutBtn) {
+            this.confirmLogoutBtn.addEventListener('click', () => this.performLogout());
+        }
+
+        // Return to login button
+        if (this.returnToLoginBtn) {
+            this.returnToLoginBtn.addEventListener('click', () => this.returnToLogin());
+        }
+
+        // Close modal when clicking outside
+        if (this.logoutModal) {
+            this.logoutModal.addEventListener('click', (e) => {
+                if (e.target === this.logoutModal) {
+                    this.hideLogoutModal();
+                }
+            });
+        }
+    }
+
+    /**
+     * Show logout confirmation modal
+     */
+    showLogoutModal() {
+        if (this.logoutModal) {
+            this.domHelpers.show(this.logoutModal);
+            Logger.info('AuthUI', 'Logout confirmation modal shown');
+        }
+    }
+
+    /**
+     * Hide logout confirmation modal
+     */
+    hideLogoutModal() {
+        if (this.logoutModal) {
+            this.domHelpers.hide(this.logoutModal);
+            Logger.info('AuthUI', 'Logout confirmation modal hidden');
+        }
+    }
+
+    /**
+     * Perform the actual logout process
+     */
+    async performLogout() {
+        try {
+            Logger.info('AuthUI', 'Starting logout process...');
+            
+            // Hide the confirmation modal
+            this.hideLogoutModal();
+            
+            // Show loading state
+            if (this.confirmLogoutBtn) {
+                this.confirmLogoutBtn.textContent = 'Signing Out...';
+                this.confirmLogoutBtn.disabled = true;
+            }
+
+            // Perform logout
+            const result = await this.authManager.signOut();
+            
+            if (result.success) {
+                // Show success page
+                this.showLogoutSuccessPage();
+            } else {
+                // Show error and restore modal
+                this.showAuthStatus(result.message || 'Failed to sign out', 'error');
+                Logger.error('AuthUI', 'Logout failed', result.error);
+            }
+            
+        } catch (error) {
+            Logger.error('AuthUI', 'Logout error', error);
+            this.showAuthStatus('An error occurred during logout', 'error');
+        } finally {
+            // Restore button state
+            if (this.confirmLogoutBtn) {
+                this.confirmLogoutBtn.textContent = 'Sign Out';
+                this.confirmLogoutBtn.disabled = false;
+            }
+        }
+    }
+
+    /**
+     * Show logout success page with countdown
+     */
+    showLogoutSuccessPage() {
+        if (this.logoutSuccessPage) {
+            // Hide main app
+            this.domHelpers.hide(document.getElementById('app-container'));
+            
+            // Show success page
+            this.domHelpers.show(this.logoutSuccessPage);
+            
+            // Start countdown
+            this.startLogoutCountdown();
+            
+            Logger.info('AuthUI', 'Logout success page shown');
+        }
+    }
+
+    /**
+     * Start countdown timer for redirect
+     */
+    startLogoutCountdown() {
+        let countdown = 5;
+        
+        const updateCountdown = () => {
+            if (this.redirectCountdown) {
+                this.redirectCountdown.textContent = countdown;
+            }
+            
+            countdown--;
+            
+            if (countdown < 0) {
+                this.returnToLogin();
+            } else {
+                setTimeout(updateCountdown, 1000);
+            }
+        };
+        
+        updateCountdown();
+    }
+
+    /**
+     * Return to login page
+     */
+    returnToLogin() {
+        // Hide success page
+        if (this.logoutSuccessPage) {
+            this.domHelpers.hide(this.logoutSuccessPage);
+        }
+        
+        // Show auth container
+        this.domHelpers.show(document.getElementById('auth-container'));
+        
+        // Reset to email step
+        this.showEmailStep();
+        
+        // Clear any form data
+        this.clearAllForms();
+        
+        Logger.info('AuthUI', 'Returned to login page');
+    }
+
+    /**
+     * Clear all form data
+     */
+    clearAllForms() {
+        const forms = [
+            'email-form', 'password-form', 'register-form', 'password-reset-form'
+        ];
+        
+        forms.forEach(formId => {
+            const form = document.getElementById(formId);
+            if (form) {
+                form.reset();
+            }
+        });
+        
+        // Clear email displays
+        if (this.passwordEmailDisplay) this.passwordEmailDisplay.textContent = '';
+        if (this.verificationEmailDisplay) this.verificationEmailDisplay.textContent = '';
+    }
+
+    /**
+     * Sign out current user (for verification page logout)
      */
     async signOut() {
-        await this.authManager.signOut();
+        const result = await this.authManager.signOut();
+        if (result.success) {
+            this.returnToLogin();
+        } else {
+            this.showAuthStatus(result.message, 'error');
+        }
     }
 
     /**

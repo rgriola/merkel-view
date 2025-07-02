@@ -42,63 +42,82 @@ class LocationManager {
      * Save location to Firestore with optional photo upload
      */
     async saveLocation(locationData, photoFile = null) {
-        console.log('💾 Saving location:', locationData);
-        
-        if (!this.currentUser) {
-            throw new Error('User not authenticated');
-        }
+        return await ErrorHandler.wrapAsync(async () => {
+            Logger.info('LocationManager', 'Saving location', { name: locationData.name });
+            
+            if (!this.currentUser) {
+                throw new Error('User not authenticated');
+            }
 
-        if (!this.db || !this.storage) {
-            throw new Error('Firebase services not initialized');
-        }
+            if (!this.db || !this.storage) {
+                throw new Error('Firebase services not initialized');
+            }
 
-        // Validate required fields
-        if (!locationData.name || !locationData.state || !locationData.city || !locationData.category) {
-            throw new Error('Please fill in all required fields');
-        }
+            // Sanitize and validate input data
+            const sanitizedData = Sanitizer.sanitizeLocationData(locationData);
+            
+            // Enhanced validation using ValidationUtils
+            const validationResult = this.validateLocationData(sanitizedData);
+            if (!validationResult.valid) {
+                throw new Error(validationResult.message);
+            }
+            
+            // Validate required fields
+            ErrorHandler.validateRequired(sanitizedData, 
+                ['name', 'state', 'city', 'category'], 
+                'Location data validation'
+            );
 
-        // Prepare location data for Firestore
-        const firestoreData = {
-            name: locationData.name.trim(),
-            address: locationData.address || '',
-            lat: locationData.lat,
-            lng: locationData.lng,
-            state: locationData.state,
-            city: locationData.city.trim(),
-            category: locationData.category,
-            notes: locationData.notes ? locationData.notes.trim() : '',
-            addedBy: this.currentUser.email,
-            userId: this.currentUser.uid,
-            dateAdded: window.firebase.firestore.FieldValue.serverTimestamp()
-        };
+            // Validate photo if provided
+            if (photoFile) {
+                Sanitizer.validateFile(photoFile, ['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+            }
 
-        try {
+            // Prepare location data for Firestore
+            const firestoreData = {
+                name: sanitizedData.name,
+                address: sanitizedData.address || '',
+                lat: sanitizedData.lat || 0,
+                lng: sanitizedData.lng || 0,
+                state: sanitizedData.state,
+                city: sanitizedData.city,
+                category: sanitizedData.category,
+                notes: sanitizedData.notes || '',
+                addedBy: this.currentUser.email,
+                userId: this.currentUser.uid,
+                dateAdded: window.firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            Logger.debug('LocationManager', 'Firestore data prepared', firestoreData);
+
             // Upload photo if provided
             if (photoFile) {
-                console.log('📸 Uploading photo:', photoFile.name);
+                Logger.info('LocationManager', 'Uploading photo', { size: photoFile.size, type: photoFile.type });
                 
-                // Create unique filename
+                const sanitizedName = Sanitizer.sanitizeFilename(sanitizedData.name);
                 const fileExtension = photoFile.name.split('.').pop();
-                const fileName = `locations/${this.currentUser.uid}/${Date.now()}_${locationData.name.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExtension}`;
+                const fileName = `locations/${this.currentUser.uid}/${Date.now()}_${sanitizedName}.${fileExtension}`;
                 
-                // Upload to Firebase Storage
                 const storage = window.firebase.storage();
                 const storageRef = storage.ref(fileName);
-                const uploadTask = await storageRef.put(photoFile);
                 
-                // Get download URL
+                const uploadTask = await ErrorHandler.withRetry(async () => {
+                    return await storageRef.put(photoFile);
+                }, 2, 2000);
+                
                 const photoURL = await uploadTask.ref.getDownloadURL();
                 firestoreData.photoURL = photoURL;
                 firestoreData.photoFileName = fileName;
                 
-                console.log('✅ Photo uploaded successfully:', photoURL);
+                Logger.success('LocationManager', 'Photo uploaded successfully', { url: photoURL });
             }
             
-            // Save location to Firestore
-            console.log('💾 Saving to Firestore...');
-            const docRef = await this.db.collection('locations').add(firestoreData);
+            // Save location to Firestore with retry
+            const docRef = await ErrorHandler.withRetry(async () => {
+                return await this.db.collection('locations').add(firestoreData);
+            }, 3, 1000);
             
-            console.log('✅ Location saved with ID:', docRef.id);
+            Logger.success('LocationManager', 'Location saved successfully', { id: docRef.id });
             
             // Notify callback
             if (this.onLocationSaved) {
@@ -111,15 +130,50 @@ class LocationManager {
                 message: photoFile ? 'Location and photo saved successfully!' : 'Location saved successfully!' 
             };
             
-        } catch (error) {
-            console.error('❌ Error saving location:', error);
+        }, 'Save location', false);
+    }
+
+    /**
+     * Get all locations (one-time fetch)
+     */
+    async getLocations() {
+        console.log('📊 Getting locations...');
+        
+        if (!this.db) {
+            throw new Error('Database not available');
+        }
+
+        try {
+            const snapshot = await this.db.collection('locations')
+                .orderBy('dateAdded', 'desc')
+                .get();
+                
+            console.log('✅ Locations fetched, count:', snapshot.size);
             
-            // Notify error callback
-            if (this.onLocationError) {
-                this.onLocationError('save', error);
+            const locations = [];
+            snapshot.forEach((doc) => {
+                const location = { ...doc.data(), id: doc.id };
+                locations.push(location);
+            });
+            
+            return locations;
+            
+        } catch (error) {
+            console.error('❌ Error getting locations:', error);
+            console.error('Error code:', error.code);
+            console.error('Error message:', error.message);
+            
+            // Show user-friendly error message based on error type
+            let errorMessage = 'Cannot load locations: ' + error.message;
+            if (error.code === 'permission-denied') {
+                errorMessage = 'Permission denied. Please check Firestore security rules or sign in again.';
+            } else if (error.code === 'unavailable') {
+                errorMessage = 'Backend temporarily unavailable. Please try again later.';
+            } else if (error.code === 'failed-precondition') {
+                errorMessage = 'Database not properly configured. Please check Firestore setup.';
             }
             
-            throw new Error('Error saving location: ' + error.message);
+            throw new Error(errorMessage);
         }
     }
 
@@ -291,49 +345,62 @@ class LocationManager {
      * Validate location data
      */
     validateLocationData(locationData) {
-        const errors = [];
-
-        if (!locationData.name || !locationData.name.trim()) {
-            errors.push('Location name is required');
+        try {
+            const { name, state, city, category, address, notes } = locationData;
+            
+            // Check required fields
+            if (!ValidationUtils.isNotEmpty(name)) {
+                return { valid: false, message: 'Location name is required' };
+            }
+            
+            if (!ValidationUtils.isNotEmpty(state)) {
+                return { valid: false, message: 'State is required' };
+            }
+            
+            if (!ValidationUtils.isNotEmpty(city)) {
+                return { valid: false, message: 'City is required' };
+            }
+            
+            if (!ValidationUtils.isNotEmpty(category)) {
+                return { valid: false, message: 'Category is required' };
+            }
+            
+            // Validate name length
+            if (name && name.length > 100) {
+                return { valid: false, message: 'Location name must be less than 100 characters' };
+            }
+            
+            // Validate address length if provided
+            if (address && address.length > 200) {
+                return { valid: false, message: 'Address must be less than 200 characters' };
+            }
+            
+            // Validate notes length if provided
+            if (notes && notes.length > 500) {
+                return { valid: false, message: 'Notes must be less than 500 characters' };
+            }
+            
+            // Validate category is from allowed list
+            const allowedCategories = ['restaurant', 'cafe', 'bar', 'shopping', 'entertainment', 'outdoors', 'hotel', 'other'];
+            if (category && !allowedCategories.includes(category)) {
+                return { valid: false, message: 'Invalid category selected' };
+            }
+            
+            // Validate coordinates if provided
+            if (locationData.lat !== undefined && (isNaN(locationData.lat) || locationData.lat < -90 || locationData.lat > 90)) {
+                return { valid: false, message: 'Invalid latitude coordinate' };
+            }
+            
+            if (locationData.lng !== undefined && (isNaN(locationData.lng) || locationData.lng < -180 || locationData.lng > 180)) {
+                return { valid: false, message: 'Invalid longitude coordinate' };
+            }
+            
+            return { valid: true };
+            
+        } catch (error) {
+            Logger.error('LocationManager', 'Location validation error', error);
+            return { valid: false, message: 'Validation error occurred' };
         }
-
-        if (!locationData.state) {
-            errors.push('State is required');
-        }
-
-        if (!locationData.city || !locationData.city.trim()) {
-            errors.push('City is required');
-        }
-
-        if (!locationData.category) {
-            errors.push('Category is required');
-        }
-
-        if (!locationData.lat || !locationData.lng) {
-            errors.push('Location coordinates are required (click on map to select)');
-        }
-
-        return {
-            isValid: errors.length === 0,
-            errors: errors
-        };
-    }
-
-    /**
-     * Get location categories
-     */
-    getLocationCategories() {
-        return [
-            { value: 'business', label: 'Business' },
-            { value: 'restaurant', label: 'Restaurant' },
-            { value: 'landmark', label: 'Landmark' },
-            { value: 'park', label: 'Park' },
-            { value: 'shopping', label: 'Shopping' },
-            { value: 'entertainment', label: 'Entertainment' },
-            { value: 'healthcare', label: 'Healthcare' },
-            { value: 'education', label: 'Education' },
-            { value: 'other', label: 'Other' }
-        ];
     }
 
     /**
@@ -379,9 +446,131 @@ class LocationManager {
             return locations;
         });
     }
+
+    /**
+     * Test Firestore connectivity and permissions
+     */
+    async testFirestoreConnection() {
+        console.log('🔍 Testing Firestore connection...');
+        
+        if (!this.db || !this.currentUser) {
+            throw new Error('Database or user not available for testing');
+        }
+
+        try {
+            // Test read permissions
+            console.log('🔍 Testing read permissions...');
+            const testRead = await this.db.collection('locations').limit(1).get();
+            console.log('✅ Read test successful, docs:', testRead.size);
+            
+            // Test write permissions with a test document
+            console.log('🔍 Testing write permissions...');
+            const testData = {
+                name: 'Connection Test',
+                lat: 0,
+                lng: 0,
+                state: 'Test',
+                city: 'Test',
+                category: 'other',
+                addedBy: this.currentUser.email,
+                userId: this.currentUser.uid,
+                dateAdded: window.firebase.firestore.FieldValue.serverTimestamp(),
+                isTestDocument: true
+            };
+            
+            const testDoc = await this.db.collection('locations').add(testData);
+            console.log('✅ Write test successful, doc ID:', testDoc.id);
+            
+            // Clean up test document
+            await testDoc.delete();
+            console.log('✅ Test document cleaned up');
+            
+            console.log('✅ Firestore connection test passed!');
+            return { success: true, message: 'Firestore connection is working properly' };
+            
+        } catch (error) {
+            console.error('❌ Firestore connection test failed:', error);
+            
+            let errorMessage = 'Firestore connection failed: ' + error.message;
+            if (error.code === 'permission-denied') {
+                errorMessage = 'Permission denied. Please check Firestore security rules.';
+            } else if (error.code === 'failed-precondition') {
+                errorMessage = 'Firestore not properly configured. Check Firebase setup.';
+            }
+            
+            return { success: false, message: errorMessage };
+        }
+    }
+
+    /**
+     * Validate location data using ValidationUtils
+     */
+    validateLocationData(locationData) {
+        try {
+            const { name, state, city, category, address, notes } = locationData;
+            
+            // Check required fields
+            if (!ValidationUtils.isNotEmpty(name)) {
+                return { valid: false, message: 'Location name is required' };
+            }
+            
+            if (!ValidationUtils.isNotEmpty(state)) {
+                return { valid: false, message: 'State is required' };
+            }
+            
+            if (!ValidationUtils.isNotEmpty(city)) {
+                return { valid: false, message: 'City is required' };
+            }
+            
+            if (!ValidationUtils.isNotEmpty(category)) {
+                return { valid: false, message: 'Category is required' };
+            }
+            
+            // Validate name length
+            if (name && name.length > 100) {
+                return { valid: false, message: 'Location name must be less than 100 characters' };
+            }
+            
+            // Validate address length if provided
+            if (address && address.length > 200) {
+                return { valid: false, message: 'Address must be less than 200 characters' };
+            }
+            
+            // Validate notes length if provided
+            if (notes && notes.length > 500) {
+                return { valid: false, message: 'Notes must be less than 500 characters' };
+            }
+            
+            // Validate category is from allowed list
+            const allowedCategories = ['restaurant', 'cafe', 'bar', 'shopping', 'entertainment', 'outdoors', 'hotel', 'other'];
+            if (category && !allowedCategories.includes(category)) {
+                return { valid: false, message: 'Invalid category selected' };
+            }
+            
+            // Validate coordinates if provided
+            if (locationData.lat !== undefined && (isNaN(locationData.lat) || locationData.lat < -90 || locationData.lat > 90)) {
+                return { valid: false, message: 'Invalid latitude coordinate' };
+            }
+            
+            if (locationData.lng !== undefined && (isNaN(locationData.lng) || locationData.lng < -180 || locationData.lng > 180)) {
+                return { valid: false, message: 'Invalid longitude coordinate' };
+            }
+            
+            return { valid: true };
+            
+        } catch (error) {
+            Logger.error('LocationManager', 'Location validation error', error);
+            return { valid: false, message: 'Validation error occurred' };
+        }
+    }
 }
 
 // Export as global for now, will be converted to ES modules later
 window.LocationManager = LocationManager;
 
-console.log('✅ Location Manager module loaded');
+// Log module loading
+if (window.Logger) {
+    Logger.info('LocationManager module loaded');
+} else {
+    console.log('✅ Location Manager module loaded');
+}

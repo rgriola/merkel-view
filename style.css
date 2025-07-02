@@ -714,3 +714,142 @@ body {
     flex: 1;
     min-width: 200px;
 }
+
+/* Test button styles */
+.btn-test {
+    background: #2196F3;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.btn-test:hover {
+    background: #1976D2;
+}
+
+/* Logout Modal Styles */
+.logout-content {
+    text-align: center;
+    padding: 2rem;
+}
+
+.logout-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.logout-content p {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.logout-detail {
+    font-size: 0.9rem !important;
+    color: #666 !important;
+    margin-bottom: 1.5rem !important;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #e0e0e0;
+    background: #f9f9f9;
+    border-radius: 0 0 10px 10px;
+}
+
+/* Logout Success Page Styles */
+#logout-success-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logout-success-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.logout-success-content {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 3rem;
+    border-radius: 15px;
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    max-width: 500px;
+    width: 90%;
+    color: white;
+}
+
+.logout-success-icon {
+    font-size: 5rem;
+    margin-bottom: 1.5rem;
+}
+
+.logout-success-content h2 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 300;
+}
+
+.logout-success-content p {
+    font-size: 1.1rem;
+    margin-bottom: 0.8rem;
+    opacity: 0.9;
+}
+
+.logout-success-content .logout-detail {
+    font-size: 1rem;
+    opacity: 0.7;
+    margin-bottom: 2rem;
+}
+
+.logout-actions {
+    margin-top: 2rem;
+}
+
+.logout-actions .btn-primary {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.logout-actions .btn-primary:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.logout-redirect-text {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin-top: 1rem;
+}
+
+#redirect-countdown {
+    font-weight: bold;
+    color: #ffd700;
+}

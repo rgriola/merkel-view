@@ -68,11 +68,23 @@ class MapsManager {
                 fullscreenControl: true
             });
             
-            // Initialize geocoder
-            this.geocoder = new google.maps.Geocoder();
-            
-            // Test geocoding availability
-            this.testGeocodingAPI();
+            // Initialize geocoder with error handling
+            try {
+                this.geocoder = new google.maps.Geocoder();
+                console.log('✅ Geocoder initialized successfully');
+                
+                // Test geocoding availability
+                this.testGeocodingAPI();
+            } catch (geocoderError) {
+                console.error('❌ Failed to initialize Geocoder:', geocoderError);
+                this.geocoder = null;
+                
+                // Show warning
+                const geocodingWarning = document.getElementById('geocoding-warning');
+                if (geocodingWarning) {
+                    geocodingWarning.style.display = 'block';
+                }
+            }
             
             // Add map click listener
             this.map.addListener('click', (event) => {
@@ -129,20 +141,43 @@ class MapsManager {
      */
     testGeocodingAPI() {
         setTimeout(() => {
-            if (!this.geocoder) return;
+            if (!this.geocoder) {
+                console.error('❌ Cannot test geocoding: Geocoder not initialized');
+                this.disableAddressSearch();
+                return;
+            }
             
-            this.geocoder.geocode({ address: 'New York, NY' }, (results, status) => {
-                console.log('🔍 Geocoding test status:', status);
-                
-                if (status === 'REQUEST_DENIED' || status === 'ERROR') {
-                    console.warn('⚠️ Geocoding API not available:', status);
-                    this.disableAddressSearch();
-                    this.geocoder = null;
-                } else if (status === 'OK' || status === 'ZERO_RESULTS') {
-                    console.log('✅ Geocoding API is working properly');
-                    this.enableAddressSearch();
-                }
-            });
+            console.log('🔍 Testing Geocoding API availability...');
+            
+            // Use try/catch to handle potential errors
+            try {
+                this.geocoder.geocode({ address: 'New York, NY' }, (results, status) => {
+                    console.log('🔍 Geocoding test status:', status);
+                    
+                    if (status === 'REQUEST_DENIED' || status === 'ERROR' || status === 'UNKNOWN_ERROR') {
+                        console.warn('⚠️ Geocoding API not available:', status);
+                        this.disableAddressSearch();
+                        this.geocoder = null;
+                        
+                        // Show diagnostic information in console
+                        console.error('📌 Geocoding API Troubleshooting Guide:');
+                        console.error('1. Ensure Geocoding API is enabled in Google Cloud Console');
+                        console.error('2. Check if your API key has any restrictions');
+                        console.error('3. Make sure billing is enabled for your Google Cloud project');
+                        
+                    } else if (status === 'OK' || status === 'ZERO_RESULTS') {
+                        console.log('✅ Geocoding API is working properly');
+                        this.enableAddressSearch();
+                    } else {
+                        console.warn('⚠️ Unexpected geocoding status:', status);
+                        this.enableAddressSearch(); // Try to enable anyway
+                    }
+                });
+            } catch (error) {
+                console.error('❌ Error testing geocoding API:', error);
+                this.disableAddressSearch();
+                this.geocoder = null;
+            }
         }, 1000);
     }
 
@@ -256,52 +291,77 @@ class MapsManager {
         
         if (!address || !address.trim()) {
             console.warn('⚠️ No address provided for search');
-            return Promise.reject('No address provided');
+            return Promise.reject(new Error('Please enter an address to search'));
+        }
+        
+        if (!this.map) {
+            console.error('❌ Map not initialized');
+            return Promise.reject(new Error('Map not yet initialized. Please try again in a moment.'));
         }
         
         if (!this.geocoder) {
             console.error('❌ Geocoder not available');
-            return Promise.reject('Address search is not available. Please enable the Geocoding API in Google Cloud Console.');
+            return Promise.reject(new Error('Address search is not available. Please enable the Geocoding API in Google Cloud Console.'));
         }
         
         return new Promise((resolve, reject) => {
-            this.geocoder.geocode({ address: address }, (results, status) => {
-                console.log('🔍 Geocoding result:', status, results);
-                
-                if (status === 'OK' && results[0]) {
-                    const location = results[0].geometry.location;
-                    console.log('✅ Location found:', location.lat(), location.lng());
+            try {
+                this.geocoder.geocode({ address: address }, (results, status) => {
+                    console.log('🔍 Geocoding result:', status, results);
                     
-                    // Center map on result
-                    this.map.setCenter(location);
-                    this.map.setZoom(this.searchZoom);
-                    
-                    // Set selected location data
-                    this.selectedLocation = {
-                        lat: location.lat(),
-                        lng: location.lng(),
-                        address: results[0].formatted_address
-                    };
-                    
-                    // Parse address components
-                    const addressComponents = this.parseAddressComponents(results[0].address_components);
-                    this.selectedLocation = { ...this.selectedLocation, ...addressComponents };
-                    
-                    // Add temporary marker
-                    this.addTemporaryMarker(location);
-                    
-                    console.log('✅ Address search successful:', this.selectedLocation);
-                    resolve(this.selectedLocation);
-                    
-                    // Notify callback
-                    if (this.onLocationSelected) {
-                        this.onLocationSelected(this.selectedLocation);
+                    if (status === 'OK' && results && results.length > 0 && results[0].geometry) {
+                        try {
+                            const location = results[0].geometry.location;
+                            console.log('✅ Location found:', location.lat(), location.lng());
+                            
+                            // Center map on result
+                            this.map.setCenter(location);
+                            this.map.setZoom(this.searchZoom);
+                            
+                            // Set selected location data
+                            this.selectedLocation = {
+                                lat: location.lat(),
+                                lng: location.lng(),
+                                address: results[0].formatted_address
+                            };
+                            
+                            // Parse address components
+                            const addressComponents = this.parseAddressComponents(results[0].address_components || []);
+                            this.selectedLocation = { ...this.selectedLocation, ...addressComponents };
+                            
+                            // Add temporary marker
+                            this.addTemporaryMarker(location);
+                            
+                            console.log('✅ Address search successful:', this.selectedLocation);
+                            resolve(this.selectedLocation);
+                            
+                            // Notify callback
+                            if (this.onLocationSelected) {
+                                this.onLocationSelected(this.selectedLocation);
+                            }
+                        } catch (processingError) {
+                            console.error('❌ Error processing geocoding results:', processingError);
+                            reject(new Error('Error processing location data. Please try again.'));
+                        }
+                    } else {
+                        let errorMessage = 'Address not found. Please try a different search term or click on the map to add a location manually.';
+                        
+                        if (status === 'ZERO_RESULTS') {
+                            errorMessage = 'No results found for this address. Try a less specific search.';
+                        } else if (status === 'REQUEST_DENIED') {
+                            errorMessage = 'Address search is not available. Please ensure the Geocoding API is enabled.';
+                        } else if (status === 'OVER_QUERY_LIMIT') {
+                            errorMessage = 'Search limit exceeded. Please try again later.';
+                        }
+                        
+                        console.error('❌ Address search failed:', status);
+                        reject(new Error(errorMessage));
                     }
-                } else {
-                    console.error('❌ Address search failed:', status);
-                    reject('Address not found. Please try a different search term or click on the map to add a location manually.');
-                }
-            });
+                });
+            } catch (error) {
+                console.error('❌ Geocoding API error:', error);
+                reject(new Error('Error connecting to geocoding service. Please try again later.'));
+            }
         });
     }
 

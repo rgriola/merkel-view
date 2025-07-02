@@ -155,14 +155,28 @@ const MerkelApp = {
         const addressSearch = document.getElementById('address-search');
         const searchBtn = document.getElementById('search-btn');
         
-        if (!addressSearch || !this.mapsManager) {
-            console.error('❌ Address search not available');
+        // Enhanced error checking for maps manager
+        if (!this.mapsManager) {
+            console.error('❌ Maps Manager not available for address search');
+            console.log('🔍 MapsManager Diagnosis:');
+            console.log('- this.mapsManager exists:', this.mapsManager ? 'Yes' : 'No');
+            console.log('- MapsManager initialized:', this.mapsManager?.isInitialized ? 'Yes' : 'No');
+            console.log('- Map available:', this.mapsManager?.map ? 'Yes' : 'No');
+            
+            this.showTemporaryMessage('Search not available. Check console for details.', 'error');
+            return;
+        }
+        
+        // Ensure address input exists
+        if (!addressSearch) {
+            console.error('❌ Address search input not found');
             return;
         }
         
         const address = addressSearch.value.trim();
         if (!address) {
             console.warn('⚠️ No address entered');
+            this.showTemporaryMessage('Please enter an address to search', 'warning');
             return;
         }
         
@@ -174,15 +188,23 @@ const MerkelApp = {
         }
         
         try {
+            // Check if maps is initialized before performing search
+            if (!this.mapsManager.isInitialized()) {
+                throw new Error('Maps not yet initialized. Please try again in a moment.');
+            }
+            
             const location = await this.mapsManager.performAddressSearch(address);
             console.log('✅ Address search successful:', location);
             
             // Clear search box
             addressSearch.value = '';
             
+            // Show success message
+            this.showTemporaryMessage(`Found: ${location.address || address}`, 'success');
+            
         } catch (error) {
             console.error('❌ Address search failed:', error);
-            alert(error);
+            this.showTemporaryMessage(error.message || error, 'error');
         } finally {
             // Reset button state
             if (searchBtn) {
@@ -369,6 +391,55 @@ const MerkelApp = {
         if (this.mapsManager) {
             this.mapsManager.centerMap(location.lat, location.lng, 15);
         }
+    },
+    
+    /**
+     * Show a temporary message to the user
+     * @param {string} message - The message to show
+     * @param {string} type - Message type: 'success', 'error', 'warning', or 'info'
+     * @param {number} duration - How long to show the message in ms (default: 3000)
+     */
+    showTemporaryMessage(message, type = 'info', duration = 3000) {
+        if (!message) return;
+        
+        // Create message element
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `temp-message ${type}`;
+        messageDiv.textContent = message;
+        
+        // Style based on type
+        const bgColor = type === 'success' ? '#4CAF50' : 
+                        type === 'error' ? '#f44336' : 
+                        type === 'warning' ? '#ff9800' : '#2196F3';
+        
+        // Style the message
+        messageDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${bgColor};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 1001;
+            font-weight: 500;
+            max-width: 80%;
+            word-wrap: break-word;
+        `;
+        
+        // Add to body
+        document.body.appendChild(messageDiv);
+        
+        // Remove after duration
+        setTimeout(() => {
+            // Add fade-out animation
+            messageDiv.style.transition = 'opacity 0.5s ease';
+            messageDiv.style.opacity = '0';
+            
+            // Remove from DOM after animation
+            setTimeout(() => messageDiv.remove(), 500);
+        }, duration);
     },
 };
 

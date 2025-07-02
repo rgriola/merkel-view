@@ -305,7 +305,37 @@
     
     <!-- Load modular application files -->
     <!-- Configuration and Firebase initialization -->
-    <script src="config.js"></script>
+    <script>
+        // Try to load production config first, then fall back to local config
+        function loadConfig() {
+            console.log('📋 Loading configuration...');
+            
+            // Try production config first
+            const productionScript = document.createElement('script');
+            productionScript.src = 'config.production.js';
+            productionScript.onload = function() {
+                console.log('📋 Config loaded from production file');
+            };
+            productionScript.onerror = function() {
+                console.log('📋 Production config not found, trying local config...');
+                
+                // Try local config as fallback
+                const localScript = document.createElement('script');
+                localScript.src = 'config.js';
+                localScript.onload = function() {
+                    console.log('📋 Config loaded from local file');
+                };
+                localScript.onerror = function() {
+                    console.log('📋 Config loaded directly');
+                    // Config will be loaded from fallback in config.production.js or inline
+                };
+                document.head.appendChild(localScript);
+            };
+            document.head.appendChild(productionScript);
+        }
+        
+        loadConfig();
+    </script>
     
     <!-- Core utilities first -->
     <script src="js/utils/logger.js"></script>

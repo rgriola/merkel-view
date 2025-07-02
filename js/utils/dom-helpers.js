@@ -102,7 +102,7 @@ const DOMHelpers = {
         AppState.elements.locationModal = this.getElementById('location-modal');
         AppState.elements.locationForm = this.getElementById('location-form');
         AppState.elements.closeModal = this.getElementById('close-modal');
-        AppState.elements.cancelLocation = this.getElementById('cancel-location');
+        // 'cancel-location' element no longer exists in the HTML
         
         // Log results
         this.logDOMElementsStatus();

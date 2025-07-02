@@ -723,24 +723,60 @@ class MapsManager {
                 }
             }
             
-            // Fallback to classic marker if advanced marker failed or not available
+            // Fallback if advanced marker API failed - use simpler version of AdvancedMarkerElement
             if (!marker) {
-                marker = new google.maps.Marker({
-                    position: { lat: location.lat, lng: location.lng },
-                    map: this.map,
-                    title: location.name || 'Location',
-                    icon: {
-                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#4CAF50">
-                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                            </svg>
-                        `),
-                        scaledSize: new google.maps.Size(32, 32),
-                        anchor: new google.maps.Point(16, 32)
-                    }
-                });
-                
-                console.log('✅ Classic marker created for:', location.name);
+                try {
+                    // Create a simple div element for the marker content
+                    const markerDiv = document.createElement('div');
+                    markerDiv.className = 'simple-marker';
+                    markerDiv.innerHTML = `
+                        <div style="background-color: #4CAF50; width: 24px; height: 24px; border-radius: 50%; 
+                                    border: 2px solid white; position: relative; transform: rotate(45deg);">
+                            <div style="position: absolute; bottom: -10px; left: 6px; width: 8px; height: 10px; 
+                                        background-color: #4CAF50; clip-path: polygon(50% 100%, 0 0, 100% 0);">
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Use AdvancedMarkerElement with custom element
+                    marker = new google.maps.marker.AdvancedMarkerElement({
+                        position: { lat: location.lat, lng: location.lng },
+                        map: this.map,
+                        title: location.name || 'Location',
+                        content: markerDiv
+                    });
+                    
+                    console.log('✅ Simple AdvancedMarker created for:', location.name);
+                } catch (simpleMarkerError) {
+                    // Last resort fallback using basic DOM element
+                    console.warn('⚠️ All marker approaches failed, using DOM element fallback');
+                    
+                    // Create a marker DIV and add it manually to the map's overlay
+                    const markerDiv = document.createElement('div');
+                    markerDiv.className = 'fallback-marker';
+                    markerDiv.textContent = '📍';
+                    markerDiv.style.cssText = 'position: absolute; font-size: 24px; transform: translate(-50%, -100%); z-index: 1000; cursor: pointer;';
+                    document.getElementById('map').appendChild(markerDiv);
+                    
+                    // Position the DIV using the map's projection
+                    const point = this.map.getProjection().fromLatLngToPoint(
+                        new google.maps.LatLng(location.lat, location.lng)
+                    );
+                    
+                    // Create a simple object to mimic a marker
+                    marker = {
+                        div: markerDiv,
+                        latLng: new google.maps.LatLng(location.lat, location.lng),
+                        // Add setMap method to work with existing code
+                        setMap: function(map) {
+                            if (map === null) {
+                                this.div.remove();
+                            }
+                        }
+                    };
+                    
+                    console.log('✅ DOM fallback marker created for:', location.name);
+                }
             }
             
             // Add click listener

@@ -125,7 +125,10 @@
             
             <div id="sidebar">
                 <h3>Locations</h3>
-                <button id="add-location-btn">Manual Add Location</button>
+                <div class="location-actions">
+                    <button id="add-location-btn">Manual Add Location</button>
+                    <button id="show-all-locations-btn" class="secondary-btn">Show All on Map</button>
+                </div>
                 <div id="location-list"></div>
             </div>
         </div>
@@ -144,6 +147,11 @@
                 <span class="close" id="close-modal">&times;</span>
             </div>
             <form id="location-form" class="location-form">
+                <!-- Location metadata (shown only when editing) -->
+                <div id="location-metadata" class="location-metadata" style="display: none;">
+                    <p><em id="location-meta-text"></em></p>
+                </div>
+                
                 <div class="form-group">
                     <label>Location Name *</label>
                     <input type="text" id="location-name" placeholder="Enter a name for this location" required>

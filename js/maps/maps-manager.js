@@ -699,6 +699,24 @@ class MapsManager {
     /**
      * Clear all location markers
      */
+    clearAllLocationMarkers() {
+        if (this.locationMarkers && this.locationMarkers.size > 0) {
+            console.log('🧹 Clearing all location markers from map:', this.locationMarkers.size);
+            
+            this.locationMarkers.forEach((marker, locationId) => {
+                if (marker.setMap) {
+                    marker.setMap(null);
+                }
+            });
+            
+            this.locationMarkers.clear();
+            console.log('✅ All location markers cleared');
+        }
+    }
+
+    /**
+     * Clear all location markers
+     */
     clearLocationMarkers() {
         this.locationMarkers.forEach(marker => {
             marker.map = null;

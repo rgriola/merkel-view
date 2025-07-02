@@ -90,6 +90,25 @@ class LocationList {
                 this.filterAndDisplayLocations();
             });
         }
+        
+        // Show all locations button
+        const showAllLocationsBtn = document.getElementById('show-all-locations-btn');
+        if (showAllLocationsBtn) {
+            showAllLocationsBtn.addEventListener('click', () => {
+                if (this.locations.length === 0) {
+                    this.showMessage('No locations to display on map', 'info');
+                    return;
+                }
+                
+                // Add all locations to map if not already added
+                this.addAllLocationsToMap();
+                
+                // Fit map to show all locations
+                this.fitMapToAllLocations();
+                
+                this.showMessage('Showing all locations on map', 'success');
+            });
+        }
     }
 
     /**
@@ -102,11 +121,18 @@ class LocationList {
         this.locationManager.onLocationsChanged = (locations) => {
             this.locations = locations;
             this.filterAndDisplayLocations();
+            this.addAllLocationsToMap();
         };
 
         this.locationManager.onLocationAdded = (location) => {
             this.locations.push(location);
             this.filterAndDisplayLocations();
+            
+            // Add the new location to the map
+            if (this.mapsManager && location.lat && location.lng) {
+                this.mapsManager.addLocationMarker(location, location.id);
+                console.log('✅ Added new location marker to map:', location.name);
+            }
         };
 
         this.locationManager.onLocationUpdated = (locationId, updatedData) => {
@@ -118,6 +144,16 @@ class LocationList {
         };
 
         this.locationManager.onLocationDeleted = (locationId) => {
+            // Remove marker from map if it exists
+            if (this.mapsManager && this.mapsManager.locationMarkers && this.mapsManager.locationMarkers.has(locationId)) {
+                const marker = this.mapsManager.locationMarkers.get(locationId);
+                if (marker.setMap) {
+                    marker.setMap(null);
+                }
+                this.mapsManager.locationMarkers.delete(locationId);
+                console.log('🧹 Removed marker for deleted location:', locationId);
+            }
+            
             this.locations = this.locations.filter(loc => loc.id !== locationId);
             this.filterAndDisplayLocations();
         };
@@ -140,6 +176,9 @@ class LocationList {
         try {
             this.locations = await this.locationManager.getLocations();
             this.filterAndDisplayLocations();
+            
+            // Add all locations to the map as markers
+            this.addAllLocationsToMap();
         } catch (error) {
             console.error('Error loading locations:', error);
             this.showError('Failed to load locations');
@@ -332,6 +371,87 @@ class LocationList {
         } catch (error) {
             console.error('Error deleting location:', error);
             this.showMessage('Failed to delete location', 'error');
+        }
+    }
+
+    /**
+     * Add all locations to the map as markers
+     */
+    addAllLocationsToMap() {
+        if (!this.mapsManager || !this.locations) {
+            console.warn('⚠️ Cannot add locations to map: missing mapsManager or locations');
+            return;
+        }
+
+        console.log('🗺️ Adding all locations to map:', this.locations.length, 'locations');
+
+        let markersAdded = 0;
+        let markersSkipped = 0;
+
+        this.locations.forEach(location => {
+            // Skip locations without coordinates
+            if (!location.lat || !location.lng) {
+                console.warn('⚠️ Skipping location without coordinates:', location.name);
+                markersSkipped++;
+                return;
+            }
+
+            // Check if marker already exists to avoid duplicates
+            if (this.mapsManager.locationMarkers && this.mapsManager.locationMarkers.has(location.id)) {
+                console.log('📍 Marker already exists for location:', location.name);
+                return;
+            }
+
+            // Add marker to map
+            const marker = this.mapsManager.addLocationMarker(location, location.id);
+            if (marker) {
+                markersAdded++;
+                console.log('✅ Added marker for location:', location.name);
+            } else {
+                markersSkipped++;
+                console.error('❌ Failed to add marker for location:', location.name);
+            }
+        });
+
+        console.log(`🗺️ Map markers summary: ${markersAdded} added, ${markersSkipped} skipped`);
+        
+        // Optionally adjust map bounds to show all markers
+        if (markersAdded > 0) {
+            this.fitMapToAllLocations();
+        }
+    }
+
+    /**
+     * Fit map bounds to show all location markers
+     */
+    fitMapToAllLocations() {
+        if (!this.mapsManager || !this.mapsManager.map || !this.locations || this.locations.length === 0) {
+            return;
+        }
+
+        const bounds = new google.maps.LatLngBounds();
+        let validLocations = 0;
+
+        this.locations.forEach(location => {
+            if (location.lat && location.lng) {
+                bounds.extend({ lat: location.lat, lng: location.lng });
+                validLocations++;
+            }
+        });
+
+        if (validLocations > 0) {
+            this.mapsManager.map.fitBounds(bounds);
+            
+            // If there's only one location, zoom out a bit
+            if (validLocations === 1) {
+                google.maps.event.addListenerOnce(this.mapsManager.map, 'bounds_changed', () => {
+                    if (this.mapsManager.map.getZoom() > 15) {
+                        this.mapsManager.map.setZoom(15);
+                    }
+                });
+            }
+            
+            console.log('🗺️ Map bounds adjusted to show all', validLocations, 'locations');
         }
     }
 

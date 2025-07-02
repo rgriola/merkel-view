@@ -443,6 +443,26 @@ body {
     padding: 2rem;
 }
 
+/* Location metadata styles */
+.location-metadata {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 1.5rem;
+}
+
+.location-metadata p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.location-metadata em {
+    font-style: italic;
+    color: #495057;
+}
+
 .form-group {
     margin-bottom: 1.5rem;
 }
@@ -537,22 +557,49 @@ body {
     font-weight: 500;
 }
 
-#add-location-btn {
-    width: 100%;
-    background: #667eea;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 6px;
-    font-size: 16px;
-    font-weight: 500;
+#sidebar .location-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 10px;
+}
+
+#sidebar .location-actions button {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
     cursor: pointer;
-    margin-bottom: 1.5rem;
-    transition: background 0.3s ease;
+    border: none;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+#add-location-btn {
+    background-color: #4CAF50;
+    color: white;
 }
 
 #add-location-btn:hover {
-    background: #5a67d8;
+    background-color: #43a047;
+}
+
+#show-all-locations-btn {
+    background-color: #2196F3;
+    color: white;
+}
+
+#show-all-locations-btn:hover {
+    background-color: #1e88e5;
+}
+
+button.secondary-btn {
+    background-color: #2196F3;
+    color: white;
+}
+
+button.secondary-btn:hover {
+    background-color: #1e88e5;
 }
 
 #location-list {
